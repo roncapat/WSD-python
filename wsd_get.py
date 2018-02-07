@@ -38,13 +38,13 @@ def WSD_Get(target_service):
     #print(r.status_code, r.reason)
     x = etree.fromstring(r.text)
     if _debug: print ('##\n## GET RESPONSE\n## %s\n##\n' % target_service.ep_ref_addr)
-    #if _debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    if _debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
     meta = x.find(".//mex:Metadata", NSMAP)
     metaModel = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisModel']", NSMAP)
     metaDev = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisDevice']", NSMAP)
     metaRel = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/Relationship']", NSMAP)
 
-    ## WSD-PRofiles section 5.1
+    ## WSD-PRofiles section 5.1 (+ PNP-X)
     metaModel.find(".//wsdp:Manufacturer", NSMAP)
     metaModel.find(".//wsdp:ManufacturerUrl", NSMAP)  
     metaModel.find(".//wsdp:ModelName", NSMAP)
@@ -57,8 +57,8 @@ def WSD_Get(target_service):
     metaDev.find(".//wsdp:SerialNumber",NSMAP)
     metaDev.find(".//wsdp:FriendlyName",NSMAP)
 
-    ## WSD-PRofiles section 5.2
-    metaRel.findall(".//wsdp:Relationship[@Type='http://schemas.xmlsoap.org/ws/2006/02/devprof/host']")
+    ## WSD-PRofiles section 5.2 (+ PNP-X)
+    metaRel.findall(".//wsdp:Relationship[@Type='http://schemas.xmlsoap.org/ws/2006/02/devprof/host']", NSMAP)
     for r in metaRel:
         host = r.find(".//wsdp:Host", NSMAP)
         if host:
