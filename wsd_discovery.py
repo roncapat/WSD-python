@@ -12,10 +12,12 @@ class TargetService:
         self.types = []
         self.scopes = []
         self.xaddrs = []
+        self.meta_ver = 0
     
     def __str__(self):
         s = ""
         s += "EndPoint Reference Address:\n\t%s\n" % self.ep_ref_addr
+        s += "Metadata version:\n\t%d\n" % self.meta_ver
         if self.types:
             s += "Implemented Types:\n"
             for t in self.types:
@@ -85,14 +87,16 @@ def WSD_Probe():
                 if _debug: print ('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
                 if _debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
                 ts = TargetService()
-                ts.ep_ref_addr = x.find(".//wsa:Address", NSMAP).text
+                ts.ep_ref_addr = x.find(".//wsa:Address", NSMAP).text #Optional endpoint fields not implemented yet
                 q = x.find(".//wsd:Types", NSMAP)
                 if q is not None: ts.types =  q.text.split()
                 q = x.find(".//wsd:Scopes", NSMAP)
                 if q is not None: ts.scopes = q.text.split()
                 q = x.find(".//wsd:XAddrs", NSMAP)
                 if q is not None: ts.xaddrs = q.text.split()
+                ts.meta_er = int(x.find(".//wsd:MetadataVersion", NSMAP).text)
                 targetServicesList.add(ts)
+                
 
         print ("\nFound %d endpoints.\n" % len(targetServicesList))
     finally:
@@ -101,5 +105,6 @@ def WSD_Probe():
 
 if __name__ == "__main__":
     parseCmdLine()
+    _debug = True
     tsl = WSD_Probe()
     for a in tsl: print(a)
