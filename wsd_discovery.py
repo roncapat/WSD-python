@@ -16,20 +16,11 @@ class TargetService:
     
     def __str__(self):
         s = ""
-        s += "EndPoint Reference Address:\n\t%s\n" % self.ep_ref_addr
-        s += "Metadata version:\n\t%d\n" % self.meta_ver
-        if self.types:
-            s += "Implemented Types:\n"
-            for t in self.types:
-                s+="\t%s\n" % t
-        if self.scopes:
-            s += "Assigned Scopes:\n"
-            for t in self.scopes:
-                s+="\t%s\n" % t
-        if self.types:
-            s += "Transport addresses:\n"
-            for t in self.xaddrs:
-                s+="\t%s\n" % t
+        s += "EndPoint reference:   %s\n" % self.ep_ref_addr
+        s += "Metadata version:     %d\n" % self.meta_ver
+        s += "Implemented Types:    %s\n" % ', '.join(self.types)
+        s += "Assigned Scopes:      %s\n" % ', '.join(self.scopes)
+        s += "Transport addresses:  %s\n" % ', '.join(self.xaddrs)
         return s
         
     def __eq__(self, other):
