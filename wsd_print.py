@@ -2,7 +2,7 @@
 #-*- encoding: utf-8 -*-
 
 import wsd_discovery
-import wsd_get
+import wsd_transfer
 
 from wsd_common import *
 
@@ -12,7 +12,7 @@ import requests
 import lxml.etree as etree
 
 def WSD_GetPrinterElements(hosted_print_service):
-    data = wsd_get.messageFromFile("ws-print_getprinterelements.xml", FROM=urn, TO=hosted_print_service.ep_ref_addr)
+    data = messageFromFile("ws-print_getprinterelements.xml", FROM=urn, TO=hosted_print_service.ep_ref_addr)
     r = requests.post(hosted_print_service.ep_ref_addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     tsl = wsd_discovery.WSD_Probe()
     for a in tsl:
         print(a)
-        (ti, hss) = wsd_get.WSD_Get(a)
+        (ti, hss) = wsd_transfer.WSD_Get(a)
         for b in hss:
             if "wprt:PrinterServiceType" in b.types:
                 print(b)
