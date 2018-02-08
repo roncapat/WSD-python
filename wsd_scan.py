@@ -11,13 +11,64 @@ import argparse
 import requests
 import lxml.etree as etree
 
+class ScannerCondition:
+    def __init__(self):
+        self.time = ""
+        self.name = ""
+        self.component = ""
+        self.severity = ""
+    def __str__(self):
+        s = ""
+        s += "Condition name:       %s\n" % self.name
+        s += "Condition time:       %s\n" % self.time
+        s += "Condition component   %s\n" % self.component
+        s += "Condition severity    %s\n" % self.severity
+        return s
+
+class ScannerStatus:
+    def __init__(self):
+        self.time = ""
+        self.state = ""
+        self.reasons = []
+        self.active_conditions = []
+        self.conditions_history = [] ##tuple (time, condition)
+
+    def __str__(self):
+        s = ""
+        s += "Scanner time:         %s\n" % self.time
+        s += "Scanner state:        %s\n" % self.state
+        s += "Reasons:              %s\n" % ", ".join(self.reasons)
+        s += "Active conditions:\n"
+        for ac in self.active_conditions:
+            s+= str(ac)
+        s += "Condition history:\n"
+        for c in self.conditions_history:
+            s += str(c[1])
+            s += "Clear time: %s\n" % c[0]
+        return s
+    
+class ScannerService:
+    def __init__(self):
+        self.name = ""
+        self.info = ""
+        self.location = ""
+        self.status = ScannerStatus()
+        
+    def __str__(self):
+        s = ""
+        s += "Scanner name:         %s\n" % self.name
+        s += "Scanner info:         %s\n" % self.info
+        s += "Scanner location:     %s\n" % self.location
+        s += str(self.status)
+        return s
+
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
 "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
 
-def WSD_GetScannerElements(hosted_print_service):
-    data = messageFromFile("ws-scan_getscannerelements.xml", FROM=urn, TO=hosted_print_service.ep_ref_addr)
-    r = requests.post(hosted_print_service.ep_ref_addr, headers=headers, data=data)
+def WSD_GetScannerElements(hosted_scan_service):
+    data = messageFromFile("ws-scan_getscannerelements.xml", FROM=urn, TO=hosted_scan_service.ep_ref_addr)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
     if debug: print ('##\n## GET SCANNER ELEMENTS RESPONSE\n##\n')
@@ -26,34 +77,44 @@ def WSD_GetScannerElements(hosted_print_service):
     scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
     scaConfig = re.find(".//sca:ScannerConfiguration", NSMAP)
     scaDescr = re.find(".//sca:ScannerDescription", NSMAP)
-    print (etree.tostring(scaStatus, pretty_print=True).decode('ascii'))
-    print (etree.tostring(scaConfig, pretty_print=True).decode('ascii'))
-    print (etree.tostring(scaDescr, pretty_print=True).decode('ascii'))
+    #print (etree.tostring(scaConfig, pretty_print=True).decode('ascii'))
 
-    scaDescr.find(".//sca:ScannerName", NSMAP)
+    sc = ScannerService()
+
+    sc.name = scaDescr.find(".//sca:ScannerName", NSMAP).text
     q = scaDescr.find(".//sca:ScannerInfo", NSMAP)
+    if q is not None: sc.info = q.text
     q = scaDescr.find(".//sca:ScannerLocation", NSMAP)
-
-    scaStatus.find(".//sca:ScannerCurrentTime", NSMAP)
-    scaStatus.find(".//sca:ScannerState", NSMAP)
+    if q is not None: sc.location = q.text
+    
+    sc.status.time = scaStatus.find(".//sca:ScannerCurrentTime", NSMAP).text
+    sc.status.state = scaStatus.find(".//sca:ScannerState", NSMAP).text
     ac = scaStatus.find(".//sca:ActiveConditions", NSMAP)
-    dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
-    for dc in dcl:
-        dc.find(".//sca:Time",NSMAP)
-        dc.find(".//sca:Name",NSMAP)
-        dc.find(".//sca:Component",NSMAP)
-        dc.find(".//sca:Severity",NSMAP)
+    if ac is not None:
+        dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
+        for dc in dcl:
+            c = ScannerCondition()
+            c.time = dc.find(".//sca:Time",NSMAP).text
+            c.name = dc.find(".//sca:Name",NSMAP).text
+            c.component = dc.find(".//sca:Component",NSMAP).text
+            c.severity = dc.find(".//sca:Severity",NSMAP).text
+            sc.status.active_conditions.append(c)
     q = scaStatus.find(".//sca:ScannerStateReasons", NSMAP)
-    if q is not None: q.findall(".//sca:ScannerStateReason", NSMAP)
+    if q is not None:
+        dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
+        for sr in dsr:
+            sc.status.reasons.append(sr.text)
     q = scaStatus.find(".//sca:ConditionHistory", NSMAP)
     if q is not None:
         chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
         for che in chl:
-            che.find(".//sca:Time",NSMAP)
-            che.find(".//sca:Name",NSMAP)
-            che.find(".//sca:Component",NSMAP)
-            che.find(".//sca:Severity",NSMAP)
-            che.find(".//sca:ClearTime", NSMAP)
+            c = ScannerCondition()
+            c.time = che.find(".//sca:Time",NSMAP).text
+            c.name = che.find(".//sca:Name",NSMAP).text
+            c.component = che.find(".//sca:Component",NSMAP).text
+            c.severity = che.find(".//sca:Severity",NSMAP).text
+            sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )
+    return sc        
             
     #TODO: scaConfig parsing
 
@@ -68,4 +129,5 @@ if __name__ == "__main__":
             if "wscn:ScannerServiceType" in b.types:
                 print(b)
                 #debug = True
-                WSD_GetScannerElements(b)
+                sc = WSD_GetScannerElements(b)
+                print (sc)
