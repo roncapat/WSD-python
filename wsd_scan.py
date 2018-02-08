@@ -21,8 +21,8 @@ class ScannerCondition:
         s = ""
         s += "Condition name:       %s\n" % self.name
         s += "Condition time:       %s\n" % self.time
-        s += "Condition component   %s\n" % self.component
-        s += "Condition severity    %s\n" % self.severity
+        s += "Condition component:  %s\n" % self.component
+        s += "Condition severity:   %s\n" % self.severity
         return s
 
 class ScannerStatus:
@@ -46,6 +46,33 @@ class ScannerStatus:
             s += str(c[1])
             s += "Clear time: %s\n" % c[0]
         return s
+
+class ScannerSettings:
+    def __init__(self):
+        self.formats = []
+        self.compression_factor = (0,0) #(min, max)
+        self.content_types = []
+        self.size_autodetect_sup = False
+        self.auto_exposure_sup = False
+        self.brightness_sup = False
+        self.contrast_sup = False
+        self.scaling_range_w = (0,0) #(min, max)
+        self.scaling_range_h = (0,0) #(min, max)
+        self.rotations = []
+        
+    def __str__(self):
+        s = ''
+        s += "Supported formats:    %s\n" % ', '.join(self.formats)
+        s += "Compression range:    %d - %d\n" % self.compression_factor
+        s += "Content types:        %s\n" % ', '.join(self.content_types)
+        s += "Size autodetect:      %r\n" % self.size_autodetect_sup
+        s += "Auto exposure:        %r\n" % self.auto_exposure_sup
+        s += "Manual brightness:    %r\n" % self.brightness_sup
+        s += "Manual contrast:      %r\n" % self.contrast_sup
+        s += "Width scaling:        %d - %d\n" % self.scaling_range_w
+        s += "Height scaling:       %d - %d\n" % self.scaling_range_h
+        s += "Rotations:            %s\n" % ', '.join(self.rotations)
+        return s
     
 class ScannerService:
     def __init__(self):
@@ -53,6 +80,7 @@ class ScannerService:
         self.info = ""
         self.location = ""
         self.status = ScannerStatus()
+        self.settings = ScannerSettings()
         
     def __str__(self):
         s = ""
@@ -60,6 +88,7 @@ class ScannerService:
         s += "Scanner info:         %s\n" % self.info
         s += "Scanner location:     %s\n" % self.location
         s += str(self.status)
+        s += str(self.settings)
         return s
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
@@ -77,8 +106,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
     scaConfig = re.find(".//sca:ScannerConfiguration", NSMAP)
     scaDescr = re.find(".//sca:ScannerDescription", NSMAP)
-    #print (etree.tostring(scaConfig, pretty_print=True).decode('ascii'))
-
+    
     sc = ScannerService()
 
     sc.name = scaDescr.find(".//sca:ScannerName", NSMAP).text
@@ -113,10 +141,44 @@ def WSD_GetScannerElements(hosted_scan_service):
             c.name = che.find(".//sca:Name",NSMAP).text
             c.component = che.find(".//sca:Component",NSMAP).text
             c.severity = che.find(".//sca:Severity",NSMAP).text
-            sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )
-    return sc        
-            
-    #TODO: scaConfig parsing
+            sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )        
+
+    print (etree.tostring(scaConfig, pretty_print=True).decode('ascii'))
+
+    ds = scaConfig.find(".//sca:DeviceSettings", NSMAP)
+    pla = scaConfig.find(".//sca:Platen", NSMAP)
+    adf = scaConfig.find(".//sca:ADF", NSMAP)
+
+    s = ScannerSettings()
+
+    q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
+    s.formats = [x.text for x in q]
+    v1 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MaxValue", NSMAP)
+    s.compression_factor = (int(v1.text), int(v2.text))
+    q = ds.findall(".//sca:ContentTypesSupported/sca:ContentTypeValue", NSMAP)
+    s.content_types = [x.text for x in q]
+    q = ds.find(".//sca:DocumentSizeAutoDetectSupported", NSMAP)
+    s.size_autodetect_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:AutoExposureSupported", NSMAP)
+    s.auto_exposure_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:BrightnessSupported", NSMAP)
+    s.brightness_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:ContrastSupported", NSMAP)
+    s.contrast_sup = True if q.text == 'true' or q.text == '1' else False
+    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MaxValue", NSMAP)
+    s.scaling_range_w = (int(v1.text), int(v2.text))
+    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MaxValue", NSMAP)
+    s.scaling_range_h = (int(v1.text), int(v2.text))
+    q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
+    s.rotations = [x.text for x in q]
+
+    sc.settings = s
+    
+    return sc
+    #TODO: scaConfig  platen/adf parsing
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
