@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 #-*- encoding: utf-8 -*-
 
+from wsd_common import *
+
 import argparse
 import struct
 import socket
 import lxml.etree as etree
+
 
 class TargetService:
     def __init__(self):
@@ -38,45 +41,31 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "wscn": "http://schemas.microsoft.com/windows/2006/08/wdp/scan",
 "i": "http://printer.example.org/2003/imaging"}
 
-def messageFromFile(fname):
-    return ''.join(open(fname).readlines())
-
-_debug = False
-_timeout = 2
-
-def parseCmdLine():
-    parser = argparse.ArgumentParser(description='WSD Discovery Scanner')
-    parser.add_argument('-D', action="store_true", default=False, required=False, help='Enable debug')
-    parser.add_argument('-T', action="store", required=False, type=int, default=2, help='Timeout')
-
-    args = parser.parse_args()
-    _debug, _timeout = args.D, args.T
-
 def WSD_Probe():
-    message = messageFromFile("ws-discovery_probe.xml")
+    message = messageFromFile("ws-discovery_probe.xml", FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 
     targetServicesList = set()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(_timeout)
+    sock.settimeout(timeout)
     ttl = struct.pack('b', 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
     try:
-        if _debug: print ('##\n## PROBE\n##\n%s' % message)
+        if debug: print ('##\n## PROBE\n##\n%s' % message)
         sent = sock.sendto(message.encode("UTF-8"), multicast_group)
 
         while True:
             try:
                 data, server = sock.recvfrom(4096)
             except socket.timeout:
-                if _debug: print ('##\n## TIMEOUT\n##\n')
+                if debug: print ('##\n## TIMEOUT\n##\n')
                 break
             else:
                 x = etree.fromstring(data)
-                if _debug: print ('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
-                if _debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+                if debug: print ('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
+                if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
                 ts = TargetService()
                 ts.ep_ref_addr = x.find(".//wsa:Address", NSMAP).text #Optional endpoint fields not implemented yet
                 q = x.find(".//wsd:Types", NSMAP)
@@ -95,7 +84,8 @@ def WSD_Probe():
         return targetServicesList
 
 if __name__ == "__main__":
-    parseCmdLine()
-    _debug = True
+    (debug, timeout) = parseCmdLine()
+    urn = genUrn()
+    debug = True
     tsl = WSD_Probe()
     for a in tsl: print(a)

@@ -2,12 +2,13 @@
 #-*- encoding: utf-8 -*-
 
 import wsd_discovery
-from wsd_discovery import _debug
+from wsd_common import *
 
 import uuid
 import argparse
 import requests
 import lxml.etree as etree
+
 
 class TargetInfo:
     def __init__(self):
@@ -69,27 +70,14 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "pnpx": "http://schemas.microsoft.com/windows/pnpx/2005/10",
 "df": "http://schemas.microsoft.com/windows/2008/09/devicefoundation"}
 
-_urn = ""
-
-def genUrn():
-    return "urn:uuid:" + str(uuid.uuid4())
-
-def messageFromFile(fname, **kwargs):
-    req = ''.join(open(fname).readlines())
-    for k in kwargs:
-        req = req.replace('{{'+k+'}}', str(kwargs[k]))
-    return req
-
-headers={'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
-
 def WSD_Get(target_service):
-    data = messageFromFile("ws-transfer_get.xml", FROM=_urn, TO=target_service.ep_ref_addr)
+    data = messageFromFile("ws-transfer_get.xml", FROM=urn, TO=target_service.ep_ref_addr)
     r = requests.post(target_service.xaddrs[0], headers=headers, data=data)
 
     #print(r.status_code, r.reason)
     x = etree.fromstring(r.text)
-    if _debug: print ('##\n## GET RESPONSE\n## %s\n##\n' % target_service.ep_ref_addr)
-    if _debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    if debug: print ('##\n## GET RESPONSE\n## %s\n##\n' % target_service.ep_ref_addr)
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
     meta = x.find(".//mex:Metadata", NSMAP)
     metaModel = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisModel']", NSMAP)
     metaDev = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisDevice']", NSMAP)
@@ -137,8 +125,8 @@ def WSD_Get(target_service):
     return (ti, hss)
 
 if __name__ == "__main__":
-    wsd_discovery.parseCmdLine()
-    genUrn()
+    (debug, timeout) = parseCmdLine()
+    urn = genUrn()
     tsl = wsd_discovery.WSD_Probe()
     for a in tsl:
         print(a)

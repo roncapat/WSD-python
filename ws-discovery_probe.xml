@@ -3,10 +3,14 @@
     <s:Header>
         <a:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action>
         <a:MessageID>uuid:0a6dc791-2be6-4991-9af1-454778a1917a</a:MessageID>
-        <a:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
+        <a:From>
+			<a:Address>{{FROM}}</a:Address>
+		</a:From>
+		<a:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
     </s:Header>
     <s:Body>
         <d:Probe>
         </d:Probe>
     </s:Body> 
 </s:Envelope>
+
