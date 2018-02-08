@@ -106,6 +106,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
     scaConfig = re.find(".//sca:ScannerConfiguration", NSMAP)
     scaDescr = re.find(".//sca:ScannerDescription", NSMAP)
+    stdTicket = re.find(".//sca:DefaultScanTicket", NSMAP)
     
     sc = ScannerService()
 
@@ -143,14 +144,11 @@ def WSD_GetScannerElements(hosted_scan_service):
             c.severity = che.find(".//sca:Severity",NSMAP).text
             sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )        
 
-    print (etree.tostring(scaConfig, pretty_print=True).decode('ascii'))
-
     ds = scaConfig.find(".//sca:DeviceSettings", NSMAP)
     pla = scaConfig.find(".//sca:Platen", NSMAP)
     adf = scaConfig.find(".//sca:ADF", NSMAP)
 
     s = ScannerSettings()
-
     q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
     s.formats = [x.text for x in q]
     v1 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MinValue", NSMAP)
@@ -174,8 +172,12 @@ def WSD_GetScannerElements(hosted_scan_service):
     s.scaling_range_h = (int(v1.text), int(v2.text))
     q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
     s.rotations = [x.text for x in q]
-
     sc.settings = s
+
+    print (etree.tostring(pla, pretty_print=True).decode('ascii'))
+    print (etree.tostring(adf, pretty_print=True).decode('ascii'))
+
+    print (etree.tostring(stdTicket, pretty_print=True).decode('ascii'))
     
     return sc
     #TODO: scaConfig  platen/adf parsing
@@ -185,11 +187,11 @@ if __name__ == "__main__":
     urn = genUrn()
     tsl = wsd_discovery.WSD_Probe()
     for a in tsl:
-        print(a)
         (ti, hss) = wsd_transfer.WSD_Get(a)
         for b in hss:
             if "wscn:ScannerServiceType" in b.types:
-                print(b)
-                #debug = True
                 sc = WSD_GetScannerElements(b)
+                print(a)
+                print(ti)
+                print(b)
                 print (sc)
