@@ -11,6 +11,10 @@ import argparse
 import requests
 import lxml.etree as etree
 
+NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
+"wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
+"pri": "http://schemas.microsoft.com/windows/2006/08/wdp/print"}
+
 def WSD_GetPrinterElements(hosted_print_service):
     data = messageFromFile("ws-print_getprinterelements.xml", FROM=urn, TO=hosted_print_service.ep_ref_addr)
     r = requests.post(hosted_print_service.ep_ref_addr, headers=headers, data=data)
@@ -28,7 +32,7 @@ if __name__ == "__main__":
         print(a)
         (ti, hss) = wsd_transfer.WSD_Get(a)
         for b in hss:
-            if "wprt:PrintServiceType" in b.types:
+            if "wprt:PrinterServiceType" in b.types:
                 print(b)
                 debug = True
                 WSD_GetPrinterElements(b)
