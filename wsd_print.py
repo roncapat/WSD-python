@@ -21,7 +21,7 @@ def WSD_GetPrinterElements(hosted_print_service):
 
 
 if __name__ == "__main__":
-    (debug, timeout) parseCmdLine()
+    (debug, timeout) = parseCmdLine()
     urn = genUrn()
     tsl = wsd_discovery.WSD_Probe()
     for a in tsl:
