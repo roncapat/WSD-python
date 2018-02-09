@@ -91,6 +91,38 @@ class ScannerSourceSettings:
         s += "Minimum size:         %d - %d\n" % self.min_size
         s += "Maximum size:         %d - %d\n" % self.max_size
         return s
+
+class MediaSide:
+    def __init__(self):
+        self.offset = (0,0)
+        self.size = (0,0)
+        self.front_color = ""
+        self.res = (0,0)
+    def __str(self):
+        pass
+
+class ScanTicket:
+    def __init__(self):
+        self.job_name = ""
+        slef.job_user_name = ""
+        self.job_info = ""
+        self.format = ""
+        self.compression_factor = ""
+        self.imaages_num = 0
+        self.input_src = ""
+        self.content_type = ""
+        self.size_autodetect = False
+        self.input_size = (0,0)
+        self.auto_exposure = False
+        self.contrast = 0
+        self.brightness = 0
+        self.sharpness = 0
+        self.scaling = (100,100)
+        self.rotation = 0
+        self.front = MediaSide()
+        self.back = None
+    def __str__(self):
+        pass
     
 class ScannerService:
     def __init__(self):
@@ -206,7 +238,6 @@ def WSD_GetScannerElements(hosted_scan_service):
     s.rotations = [x.text for x in q]
     sc.settings = s
 
-    #print (etree.tostring(pla, pretty_print=True).decode('ascii'))
     if pla is not None:
         sss = ScannerSourceSettings()
         v1 = pla.find(".//sca:PlatenOpticalResolution/sca:Width", NSMAP)
@@ -226,8 +257,6 @@ def WSD_GetScannerElements(hosted_scan_service):
         sss.max_size = (int(v1.text), int(v2.text))
         sc.platen = sss
 
-
-    #print (etree.tostring(adf, pretty_print=True).decode('ascii'))
     if adf is not None:
         q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
         sc.adf_duplex = True if q.text == 'true' or q.text == '1' else False
@@ -272,7 +301,56 @@ def WSD_GetScannerElements(hosted_scan_service):
 
 
     print (etree.tostring(stdTicket, pretty_print=True).decode('ascii'))
-    
+    stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP)
+    stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP)
+    q = stdTicket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
+    if q is not None:
+        pass
+    dp = stdTicket.find(".//sca:DocumentParameters", NSMAP)
+    q = dp.find(".//sca:Format", NSMAP)
+    q = dp.find(".//sca:CompressionQualityFactor", NSMAP)
+    q = dp.find(".//sca:ImagesToTransfer", NSMAP)
+    q = dp.find(".//sca:InputSource", NSMAP)
+    q = dp.find(".//sca:ContentType", NSMAP)
+    q = dp.find(".//sca:InputSize", NSMAP)
+    if q is not None:
+        q.find(".//sca:DocumentAutoDetect", NSMAP)
+        q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
+        q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
+    q = dp.find(".//sca:Exposure", NSMAP)
+    if q is not None:
+        q.find(".//sca:AutoExposure", NSMAP)
+        q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP)
+        q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP)
+        q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP)
+    q = dp.find(".//sca:Scaling", NSMAP)
+    if q is not None:
+        q.find(".//sca:Scaling/sca:ScalingWidth", NSMAP)
+        q.find(".//sca:Scaling/sca:ScalingHeight", NSMAP)
+    dp.find(".//sca:Rotation", NSMAP)
+    q = dp.find(".//sca:MediaSides", NSMAP)
+    if q is not None:
+        f = q.find(".//sca:MediaFront", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionYOffset", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionWidth", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionHeight", NSMAP)
+        f.find(".sca:ColorProcessing", NSMAP)
+        f.find(".sca:Resolution/sca:Width", NSMAP)
+        f.find(".sca:ScanRegion/sca:Height", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
+        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
+        b = q.find(".//sca:MediaBack", NSMAP)
+        if b is not None:
+            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
+            b.find(".sca:ScanRegion/sca:ScanRegionYOffset", NSMAP)
+            b.find(".sca:ScanRegion/sca:ScanRegionWidth", NSMAP)
+            b.find(".sca:ScanRegion/sca:ScanRegionHeight", NSMAP)
+            b.find(".sca:ColorProcessing", NSMAP)
+            b.find(".sca:Resolution/sca:Width", NSMAP)
+            b.find(".sca:ScanRegion/sca:Height", NSMAP)
+            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
+            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
 
 
     return sc
@@ -290,4 +368,4 @@ if __name__ == "__main__":
                 print(a)
                 print(ti)
                 print(b)
-                print (sc)
+                print(sc)
