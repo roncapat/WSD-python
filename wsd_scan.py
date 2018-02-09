@@ -73,6 +73,24 @@ class ScannerSettings:
         s += "Height scaling:       %d - %d\n" % self.scaling_range_h
         s += "Rotations:            %s\n" % ', '.join(self.rotations)
         return s
+
+class ScannerSourceSettings:
+    def __init__(self):
+        self.optical_res = (0,0)
+        self.width_res = []
+        self.heigh_res = []
+        self.color_modes = []
+        self.min_size = (0,0)
+        self.max_size = (0,0)
+    def __str__(self):
+        s = ""
+        s += "Optical resolution:   %d - %d\n" % self.optical_res
+        s += "Width resolutions:    %s\n" % ', '.join(self.width_res)
+        s += "Height resolutions:   %s\n" % ', '.join(self.height_res)
+        s += "Color modes:          %s\n" % ', '.join(self.color_modes)
+        s += "Minimum size:         %d - %d\n" % self.min_size
+        s += "Maximum size:         %d - %d\n" % self.max_size
+        return s
     
 class ScannerService:
     def __init__(self):
@@ -81,6 +99,10 @@ class ScannerService:
         self.location = ""
         self.status = ScannerStatus()
         self.settings = ScannerSettings()
+        self.platen = None
+        self.adf_duplex = False
+        self.front_adf = None
+        self.back_adf = None
         
     def __str__(self):
         s = ""
@@ -89,6 +111,15 @@ class ScannerService:
         s += "Scanner location:     %s\n" % self.location
         s += str(self.status)
         s += str(self.settings)
+        if self.platen is not None:
+            s += "Platen settings:\n"
+            s += str(self.platen)
+        if self.front_adf is not None:
+            s += "ADF settings:\n"
+            s += "ADF Duplex:            %r\n" % self.adf_duplex
+            s += str(self.front_adf)
+            if self.adf_duplex:
+                s += str(self.back_adf)
         return s
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
@@ -147,6 +178,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     ds = scaConfig.find(".//sca:DeviceSettings", NSMAP)
     pla = scaConfig.find(".//sca:Platen", NSMAP)
     adf = scaConfig.find(".//sca:ADF", NSMAP)
+    ## .//sca:Film omitted
 
     s = ScannerSettings()
     q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
@@ -174,13 +206,77 @@ def WSD_GetScannerElements(hosted_scan_service):
     s.rotations = [x.text for x in q]
     sc.settings = s
 
-    print (etree.tostring(pla, pretty_print=True).decode('ascii'))
-    print (etree.tostring(adf, pretty_print=True).decode('ascii'))
+    #print (etree.tostring(pla, pretty_print=True).decode('ascii'))
+    if pla is not None:
+        sss = ScannerSourceSettings()
+        v1 = pla.find(".//sca:PlatenOpticalResolution/sca:Width", NSMAP)
+        v2 = pla.find(".//sca:PlatenOpticalResolution/sca:Height", NSMAP)
+        sss.optical_res = (int(v1.text), int(v2.text))
+        q = pla.findall(".//sca:PlatenResolutions/sca:Widths/sca:Width", NSMAP)
+        sss.width_res = [x.text for x in q]
+        q = pla.findall(".//sca:PlatenResolutions/sca:Heights/sca:Height", NSMAP)
+        sss.height_res = [x.text for x in q]                                                                                        
+        q = pla.findall(".//sca:PlatenColor/sca:ColorEntry", NSMAP)
+        sss.color_modes = [x.text for x in q]  
+        v1 = pla.find(".//sca:PlatenMinimumSize/sca:Width", NSMAP)
+        v2 = pla.find(".//sca:PlatenMinimumSize/sca:Height", NSMAP)
+        sss.min_size = (int(v1.text), int(v2.text))
+        v1 = pla.find(".//sca:PlatenMaximumSize/sca:Width", NSMAP)
+        v2 = pla.find(".//sca:PlatenMaximumSize/sca:Height", NSMAP)
+        sss.max_size = (int(v1.text), int(v2.text))
+        sc.platen = sss
+
+
+    #print (etree.tostring(adf, pretty_print=True).decode('ascii'))
+    if adf is not None:
+        q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
+        sc.adf_duplex = True if q.text == 'true' or q.text == '1' else False
+        f = adf.find(".//sca:ADFFront", NSMAP)
+        b = adf.find(".//sca:ADFBack", NSMAP)
+        if f is not None:
+            sss = ScannerSourceSettings()
+            v1 = f.find(".//sca:ADFOpticalResolution/sca:Width", NSMAP)
+            v2 = f.find(".//sca:ADFOpticalResolution/sca:Height", NSMAP)
+            sss.optical_res = (int(v1.text), int(v2.text))
+            q = f.findall(".//sca:ADFResolutions/sca:Widths/sca:Width", NSMAP)
+            sss.width_res = [x.text for x in q]
+            q = f.findall(".//sca:ADFResolutions/sca:Heights/sca:Height", NSMAP)
+            sss.height_res = [x.text for x in q]  
+            q = f.find(".//sca:ADFColor/sca:ColorEntry", NSMAP)
+            sss.color_modes = [x.text for x in q]
+            v1 = f.find(".//sca:ADFMinimumSize/sca:Width", NSMAP)
+            v2 = f.find(".//sca:ADFMinimumSize/sca:Height", NSMAP)
+            sss.min_size = (int(v1.text), int(v2.text))
+            v1 = f.find(".//sca:ADFMaximumSize/sca:Width", NSMAP)
+            v2 = f.find(".//sca:ADFMaximumSize/sca:Height", NSMAP)
+            sss.max_size = (int(v1.text), int(v2.text))
+            sc.front_adf = sss
+        if b is not None:
+            sss = ScannerSourceSettings()
+            v1 = b.find(".//sca:ADFOpticalResolution/sca:Width", NSMAP)
+            v2 = b.find(".//sca:ADFOpticalResolution/sca:Height", NSMAP)
+            sss.optical_res = (int(v1.text), int(v2.text))
+            q = b.findall(".//sca:ADFResolutions/sca:Widths/sca:Width", NSMAP)
+            sss.width_res = [x.text for x in q]
+            q = b.findall(".//sca:ADFResolutions/sca:Heights/sca:Height", NSMAP)
+            sss.height_res = [x.text for x in q]  
+            q = b.find(".//sca:ADFColor/sca:ColorEntry", NSMAP)
+            sss.color_modes = [x.text for x in q]
+            v1 = b.find(".//sca:ADFMinimumSize/sca:Width", NSMAP)
+            v2 = b.find(".//sca:ADFMinimumSize/sca:Height", NSMAP)
+            sss.min_size = (int(v1.text), int(v2.text))
+            v1 = b.find(".//sca:ADFMaximumSize/sca:Width", NSMAP)
+            v2 = b.find(".//sca:ADFMaximumSize/sca:Height", NSMAP)
+            sss.max_size = (int(v1.text), int(v2.text))
+            sc.back_adf = sss
+
 
     print (etree.tostring(stdTicket, pretty_print=True).decode('ascii'))
     
+
+
     return sc
-    #TODO: scaConfig  platen/adf parsing
+
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
