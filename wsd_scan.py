@@ -7,6 +7,7 @@ import wsd_transfer
 from wsd_common import *
 
 import uuid
+import copy
 import argparse
 import requests
 import lxml.etree as etree
@@ -423,10 +424,57 @@ def WSD_GetScannerElements(hosted_scan_service):
             q = f.find(".//sca:Resolution/sca:Height", NSMAP)
             s.res = (s.res[0], int(q.text))
             t.back = s
+        else:
+            t.back = copy.deepcopy(t.front)
     sc.std_ticket = t
 
     return sc
 
+def WSD_ValidateScanTicket(hosted_scan_service, ticket):
+    params = {'JOB_NAME': ticket.job_name,
+              'USER_NAME': ticket.job_user_name,
+              'JOB_INFO':ticket.job_info,
+              'FORMAT':ticket.format,
+              'COMPRESSION_FACTOR':ticket.compression_factor,
+              'IMG_NUM':ticket.images_num,
+              'INPUT_SRC':ticket.input_src,
+              'CONTENT_TYPE':ticket.content_type,
+              'SIZE_AUTODETEC':ticket.size_autodetect,
+              'INPUT_W':ticket.input_size[0],
+              'INPUT_H':ticket.input_size[1],
+              'AUTO_EXPOSURE':ticket.auto_exposure,
+              'CONTRAST':ticket.contrast,
+              'BRIGHTNESS':ticket.brightness,
+              'SHARPNESS':ticket.sharpness,
+              'SCALING_W':ticket.scaling[0],
+              'SCALING_H':ticket.scaling[1],
+              'ROTATION':ticket.rotation,
+              'FRONT_X_OFFSET':ticket.front.offset[0],
+              'FRONT_Y_OFFSET':ticket.front.offset[1],
+              'FRONT_SIZE_W':ticket.front.size[0],
+              'FRONT_SIZE_H':ticket.front.size[1],
+              'FRONT_COLOR':ticket.front.color,
+              'FRONT_RES_W':ticket.front.res[0],
+              'FRONT_RES_H':ticket.front.res[1],
+              'BACK_X_OFFSET':ticket.back.offset[0],
+              'BACK_Y_OFFSET':ticket.back.offset[1],
+              'BACK_SIZE_W':ticket.back.size[0],
+              'BACK_SIZE_H':ticket.back.size[1],
+              'BACK_COLOR':ticket.back.color,
+              'BACK_RES_W':ticket.back.res[0],
+              'BACK_RES_H':ticket.back.res[1]
+            }
+    data = messageFromFile("ws-scan_validatescanticket.xml",
+                           FROM=urn,
+                           TO=hosted_scan_service.ep_ref_addr,
+                           **params)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    if debug: print ('##\n## VALIDATE SCAN TICKET REQUEST\n##\n%s' % data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## VALIDATE SCAN TICKET RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
@@ -441,3 +489,5 @@ if __name__ == "__main__":
                 print(ti)
                 print(b)
                 print(sc)
+                debug = True
+                WSD_ValidateScanTicket(b, sc.std_ticket)
