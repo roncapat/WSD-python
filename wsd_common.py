@@ -24,3 +24,9 @@ def parseCmdLine():
 
     args = parser.parse_args()
     return (args.D, args.T)
+
+def indent(text):
+    s = ""
+    for l in text.splitlines():
+        s += "\t%s\n" % l
+    return s

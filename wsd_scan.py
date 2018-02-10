@@ -40,11 +40,11 @@ class ScannerStatus:
         s += "Reasons:              %s\n" % ", ".join(self.reasons)
         s += "Active conditions:\n"
         for ac in self.active_conditions:
-            s+= str(ac)
+            s+= indent(str(ac))
         s += "Condition history:\n"
         for c in self.conditions_history:
-            s += str(c[1])
-            s += "Clear time: %s\n" % c[0]
+            s += indent(str(c[1]))
+            s += indent("Clear time: %s\n" % c[0])
         return s
 
 class ScannerSettings:
@@ -84,31 +84,22 @@ class ScannerSourceSettings:
         self.max_size = (0,0)
     def __str__(self):
         s = ""
-        s += "Optical resolution:   %d - %d\n" % self.optical_res
+        s += "Optical resolution:   (%d, %d)\n" % self.optical_res
         s += "Width resolutions:    %s\n" % ', '.join(self.width_res)
         s += "Height resolutions:   %s\n" % ', '.join(self.height_res)
         s += "Color modes:          %s\n" % ', '.join(self.color_modes)
-        s += "Minimum size:         %d - %d\n" % self.min_size
-        s += "Maximum size:         %d - %d\n" % self.max_size
+        s += "Minimum size:         (%d, %d)\n" % self.min_size
+        s += "Maximum size:         (%d, %d)\n" % self.max_size
         return s
-
-class MediaSide:
-    def __init__(self):
-        self.offset = (0,0)
-        self.size = (0,0)
-        self.front_color = ""
-        self.res = (0,0)
-    def __str(self):
-        pass
 
 class ScanTicket:
     def __init__(self):
         self.job_name = ""
-        slef.job_user_name = ""
+        self.job_user_name = ""
         self.job_info = ""
         self.format = ""
         self.compression_factor = ""
-        self.imaages_num = 0
+        self.images_num = 0
         self.input_src = ""
         self.content_type = ""
         self.size_autodetect = False
@@ -119,11 +110,48 @@ class ScanTicket:
         self.sharpness = 0
         self.scaling = (100,100)
         self.rotation = 0
-        self.front = MediaSide()
+        self.front = None
         self.back = None
     def __str__(self):
-        pass
-    
+        s = ""
+        s += "Job name:             %s\n" % self.job_name
+        s += "User name:            %s\n" % self.job_user_name
+        s += "Job info:             %s\n" % self.job_info
+        s += "Format:               %s\n" % self.format
+        s += "Compression factor:   %s\n" % self.compression_factor
+        s += "Images count:         %d\n" % self.images_num
+        s += "Input source:         %s\n" % self.input_src
+        s += "Content type:         %s\n" % self.content_type
+        s += "Size autodetect:      %r\n" % self.size_autodetect
+        s += "Input size:           (%d, %d)\n" % self.input_size
+        s += "Auto exposure:        %r\n" % self.auto_exposure
+        s += "Contrast:             %d\n" % self.contrast
+        s += "Brightness:           %d\n" % self.brightness
+        s += "Sharpness:            %d\n" % self.sharpness
+        s += "Scaling:              (%d, %d)\n" % self.scaling
+        s += "Rotation:             %d\n" % self.rotation
+        if self.front is not None:
+            s += "Front side:\n"
+            s += indent(str(self.front))
+        if self.back is not None:
+            s += "Back side:\n"
+            s += indent(str(self.back))
+        return s
+
+class MediaSide:
+    def __init__(self):
+        self.offset = (0,0)
+        self.size = (0,0)
+        self.color = ""
+        self.res = (0,0)
+    def __str__(self):
+        s = ""
+        s += "Offset:               (%d, %d)\n" % self.offset
+        s += "Size:                 (%d, %d)\n" % self.size
+        s += "Color mode:           %s\n" % self.color
+        s += "Resolution:           (%d, %d)\n" % self.res
+        return s
+  
 class ScannerService:
     def __init__(self):
         self.name = ""
@@ -135,6 +163,7 @@ class ScannerService:
         self.adf_duplex = False
         self.front_adf = None
         self.back_adf = None
+        self.std_ticket = None
         
     def __str__(self):
         s = ""
@@ -145,13 +174,17 @@ class ScannerService:
         s += str(self.settings)
         if self.platen is not None:
             s += "Platen settings:\n"
-            s += str(self.platen)
+            s += indent(str(self.platen))
         if self.front_adf is not None:
-            s += "ADF settings:\n"
-            s += "ADF Duplex:            %r\n" % self.adf_duplex
-            s += str(self.front_adf)
+            s += "ADF Duplex:           %r\n" % self.adf_duplex
+            s += "ADF front settings:\n"
+            s += indent(str(self.front_adf))
             if self.adf_duplex:
-                s += str(self.back_adf)
+                s += "ADF back settings:\n"
+                s += indent(str(self.back_adf))
+        if self.std_ticket is not None:
+            s += "Default ticket:\n"
+            s += indent(str(self.std_ticket))
         return s
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
@@ -165,6 +198,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     x = etree.fromstring(r.text)
     if debug: print ('##\n## GET SCANNER ELEMENTS RESPONSE\n##\n')
     if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
     re = x.find(".//sca:ScannerElements", NSMAP)
     scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
     scaConfig = re.find(".//sca:ScannerConfiguration", NSMAP)
@@ -237,7 +271,6 @@ def WSD_GetScannerElements(hosted_scan_service):
     q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
     s.rotations = [x.text for x in q]
     sc.settings = s
-
     if pla is not None:
         sss = ScannerSourceSettings()
         v1 = pla.find(".//sca:PlatenOpticalResolution/sca:Width", NSMAP)
@@ -256,7 +289,6 @@ def WSD_GetScannerElements(hosted_scan_service):
         v2 = pla.find(".//sca:PlatenMaximumSize/sca:Height", NSMAP)
         sss.max_size = (int(v1.text), int(v2.text))
         sc.platen = sss
-
     if adf is not None:
         q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
         sc.adf_duplex = True if q.text == 'true' or q.text == '1' else False
@@ -299,59 +331,99 @@ def WSD_GetScannerElements(hosted_scan_service):
             sss.max_size = (int(v1.text), int(v2.text))
             sc.back_adf = sss
 
-
-    print (etree.tostring(stdTicket, pretty_print=True).decode('ascii'))
-    stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP)
-    stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP)
+    t = ScanTicket()
+    t.job_name = stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
+    t.job_user_name = stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
     q = stdTicket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
     if q is not None:
-        pass
+        t.job_info = q.text
     dp = stdTicket.find(".//sca:DocumentParameters", NSMAP)
     q = dp.find(".//sca:Format", NSMAP)
+    if q is not None:
+        t.format = q.text
     q = dp.find(".//sca:CompressionQualityFactor", NSMAP)
+    if q is not None:
+        t.compression_factor = q.text
     q = dp.find(".//sca:ImagesToTransfer", NSMAP)
+    if q is not None:
+        t.images_num = int(q.text)
     q = dp.find(".//sca:InputSource", NSMAP)
+    if q is not None:
+        t.input_src = q.text
     q = dp.find(".//sca:ContentType", NSMAP)
+    if q is not None:
+        t.content_type = q.text
     q = dp.find(".//sca:InputSize", NSMAP)
     if q is not None:
-        q.find(".//sca:DocumentAutoDetect", NSMAP)
-        q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
-        q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
+        b = q.find(".//sca:DocumentAutoDetect", NSMAP)
+        if b is not None:
+            t.size_autodetect = True if b.text == 'true' or b.text == '1' else False
+        v1 = q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
+        v2 = q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
+        t.input_size = (int(v1.text), int(v2.text))
     q = dp.find(".//sca:Exposure", NSMAP)
     if q is not None:
-        q.find(".//sca:AutoExposure", NSMAP)
-        q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP)
-        q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP)
-        q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP)
+        b = q.find(".//sca:AutoExposure", NSMAP)
+        if b is not None:
+            t.auto_exposure = True if b.text == 'true' or b.text == '1' else False
+        t.contrast = int(q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP).text)
+        t.brightness = int(q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP).text)
+        t.sharpness = int(q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP).text)
     q = dp.find(".//sca:Scaling", NSMAP)
     if q is not None:
-        q.find(".//sca:Scaling/sca:ScalingWidth", NSMAP)
-        q.find(".//sca:Scaling/sca:ScalingHeight", NSMAP)
-    dp.find(".//sca:Rotation", NSMAP)
+        v1 = q.find(".//sca:ScalingWidth", NSMAP)
+        v2 = q.find(".//sca:ScalingHeight", NSMAP)
+        t.scaling = (int(v1.text), int(v2.text))
+    q = dp.find(".//sca:Rotation", NSMAP)
+    if q is not None:
+        t.rotation = int(q.text)
     q = dp.find(".//sca:MediaSides", NSMAP)
     if q is not None:
         f = q.find(".//sca:MediaFront", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionYOffset", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionWidth", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionHeight", NSMAP)
-        f.find(".sca:ColorProcessing", NSMAP)
-        f.find(".sca:Resolution/sca:Width", NSMAP)
-        f.find(".sca:ScanRegion/sca:Height", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-        f.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-        b = q.find(".//sca:MediaBack", NSMAP)
-        if b is not None:
-            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-            b.find(".sca:ScanRegion/sca:ScanRegionYOffset", NSMAP)
-            b.find(".sca:ScanRegion/sca:ScanRegionWidth", NSMAP)
-            b.find(".sca:ScanRegion/sca:ScanRegionHeight", NSMAP)
-            b.find(".sca:ColorProcessing", NSMAP)
-            b.find(".sca:Resolution/sca:Width", NSMAP)
-            b.find(".sca:ScanRegion/sca:Height", NSMAP)
-            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-            b.find(".sca:ScanRegion/sca:ScanRegionXOffset", NSMAP)
-
+        s = MediaSide()
+        r = f.find(".//sca:ScanRegion", NSMAP)
+        if r is not None:
+            q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+            if q is not None:
+                s.offset = (int(q.text),s.offset[1])
+            q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+            if q is not None:
+                s.offset = (s.offset[0], int(q.text))
+            v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
+            v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+            s.size = (int(v1.text), int(v2.text))
+        q = f.find(".//sca:ColorProcessing", NSMAP)
+        if q is not None:
+            s.color = q.text
+        q = f.find(".//sca:Resolution/sca:Width", NSMAP)
+        s.res = (int(q.text),s.res[1])
+        q = f.find(".//sca:Resolution/sca:Height", NSMAP)
+        s.res = (s.res[0], int(q.text))
+        t.front = s
+        
+        f = q.find(".//sca:MediaBack", NSMAP)
+        if f is not None:
+            s = MediaSide()
+            r = f.find(".sca:ScanRegion", NSMAP)
+            if r is not None:
+                q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+                if q is not None:
+                    s.offset = (int(q.text),s.offset[1])
+                q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+                if q is not None:
+                    s.offset = (s.offset[0], int(q.text))
+                v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
+                v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+                s.size = (int(v1.text), int(v2.text))
+            q = f.find(".//sca:ColorProcessing", NSMAP)
+            if q is not None:
+                s.color = q.text
+            q = f.find(".//sca:Resolution/sca:Width", NSMAP)
+            s.res = (int(q.text),s.res[1])
+            q = f.find(".//sca:Resolution/sca:Height", NSMAP)
+            s.res = (s.res[0], int(q.text))
+            t.back = s
+    sc.std_ticket = t
 
     return sc
 
