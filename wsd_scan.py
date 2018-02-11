@@ -7,6 +7,7 @@ import wsd_transfer
 from wsd_common import *
 
 import uuid
+import email
 import copy
 import argparse
 import requests
@@ -601,21 +602,26 @@ def WSD_CreateScanJob(hosted_scan_service, ticket):
 
     return j
 
-def WSD_RetrieveImage(hosted_scan_service, job):
+def WSD_RetrieveImage(hosted_scan_service, job, docname):
     data = messageFromFile("ws-scan_retrieveimage.xml",
                        FROM=urn,
                        TO=hosted_scan_service.ep_ref_addr,
                        JOB_ID=job.id,
                        JOB_TOKEN=job.token,
-                       DOC_DESCR=job.descr)
+                       DOC_DESCR=docname)
+    
+    if debug: print ('##\n## RETRIEVE IMAGE REQUEST\n##\n%s\n' % data)
 
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
-    if debug: print ('##\n## RETRIEVE IMAGE REQUEST\n##\n%s' % data)
+    content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
+    m = email.message_from_bytes(content_with_header)
 
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    l = list(m.walk())
+
+    if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % l[1])
+    open(docname, "wb").write(l[2].get_payload(decode=True))
+
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
@@ -634,4 +640,4 @@ if __name__ == "__main__":
                 if valid:
                     j = WSD_CreateScanJob(b, ticket)
                     print (j)
-                    debug = True
+                    WSD_RetrieveImage(b,j, "test.jpeg")
