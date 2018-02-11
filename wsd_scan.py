@@ -576,9 +576,9 @@ def WSD_CreateScanJob(hosted_scan_service, ticket):
                            FROM=urn,
                            TO=hosted_scan_service.ep_ref_addr,
                            **params)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
+    
     if debug: print ('##\n## CREATE SCAN JOB REQUEST\n##\n%s' % data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
     if debug: print ('##\n## CREATE SCAN JOB RESPONSE\n##\n')
@@ -622,6 +622,31 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
     if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % l[1])
     open(docname, "wb").write(l[2].get_payload(decode=True))
 
+
+def WSD_CancelJob(hosted_scan_service, job):
+    data = messageFromFile("ws-scan_retrieveimage.xml",
+                       FROM=urn,
+                       TO=hosted_scan_service.ep_ref_addr,
+                       JOB_ID=job.id)
+
+    if debug: print ('##\n## CANCEL JOB REQUEST\n##\n%s\n' % data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## CANCEL JOB RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    x.find(".//sca:ClientErrorJobIdNotFound", NSMAP)
+    if x is None return True else return False
+
+def WSD_GetJobElements(hosted_scan_service, job):
+    pass
+
+def WSD_GetActiveJobs(hosted_scan_service):
+    pass
+
+def WSD_GetJobHistory(hosted_Scan_service):
+    pass
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
