@@ -42,7 +42,7 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "i": "http://printer.example.org/2003/imaging"}
 
 def WSD_Probe():
-    message = messageFromFile("ws-discovery_probe.xml", FROM=urn)
+    message = messageFromFile(AbsPath("../templates/ws-discovery_probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 
     targetServicesList = set()

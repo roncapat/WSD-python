@@ -338,7 +338,7 @@ def WSD_GetScannerElements(hosted_scan_service):
 
     #TODO: handle error messages
 
-    data = messageFromFile("ws-scan_getscannerelements.xml", FROM=urn, TO=hosted_scan_service.ep_ref_addr)
+    data = messageFromFile(AbsPath("../templates/ws-scan_getscannerelements.xml"), FROM=urn, TO=hosted_scan_service.ep_ref_addr)
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
@@ -517,7 +517,7 @@ def WSD_ValidateScanTicket(hosted_scan_service, ticket):
               'BACK_RES_W':ticket.doc_params.back.res[0],
               'BACK_RES_H':ticket.doc_params.back.res[1]
             }
-    data = messageFromFile("ws-scan_validatescanticket.xml",
+    data = messageFromFile(AbsPath("../templates/ws-scan_validatescanticket.xml"),
                            FROM=urn,
                            TO=hosted_scan_service.ep_ref_addr,
                            **params)
@@ -572,7 +572,7 @@ def WSD_CreateScanJob(hosted_scan_service, ticket):
               'BACK_RES_W':ticket.doc_params.back.res[0],
               'BACK_RES_H':ticket.doc_params.back.res[1]
         }
-    data = messageFromFile("ws-scan_createscanjob.xml",
+    data = messageFromFile(AbsPath("../templates/ws-scan_createscanjob.xml"),
                            FROM=urn,
                            TO=hosted_scan_service.ep_ref_addr,
                            **params)
@@ -603,7 +603,7 @@ def WSD_CreateScanJob(hosted_scan_service, ticket):
     return j
 
 def WSD_RetrieveImage(hosted_scan_service, job, docname):
-    data = messageFromFile("ws-scan_retrieveimage.xml",
+    data = messageFromFile(AbsPath("../templates/ws-scan_retrieveimage.xml"),
                        FROM=urn,
                        TO=hosted_scan_service.ep_ref_addr,
                        JOB_ID=job.id,
@@ -624,7 +624,7 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
 
 
 def WSD_CancelJob(hosted_scan_service, job):
-    data = messageFromFile("ws-scan_retrieveimage.xml",
+    data = messageFromFile(AbsPath("../templates/ws-scan_retrieveimage.xml"),
                        FROM=urn,
                        TO=hosted_scan_service.ep_ref_addr,
                        JOB_ID=job.id)
@@ -637,7 +637,7 @@ def WSD_CancelJob(hosted_scan_service, job):
     if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
 
     x.find(".//sca:ClientErrorJobIdNotFound", NSMAP)
-    if x is None return True else return False
+    return (x is None)
 
 def WSD_GetJobElements(hosted_scan_service, job):
     pass

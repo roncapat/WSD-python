@@ -71,7 +71,7 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "df": "http://schemas.microsoft.com/windows/2008/09/devicefoundation"}
 
 def WSD_Get(target_service):
-    data = messageFromFile("ws-transfer_get.xml", FROM=urn, TO=target_service.ep_ref_addr)
+    data = messageFromFile(AbsPath("../templates/ws-transfer_get.xml"), FROM=urn, TO=target_service.ep_ref_addr)
     r = requests.post(target_service.xaddrs[0], headers=headers, data=data)
 
     #print(r.status_code, r.reason)

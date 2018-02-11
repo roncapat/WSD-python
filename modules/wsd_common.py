@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 #-*- encoding: utf-8 -*-
 
-import argparse, uuid
+import argparse, uuid, os
 
 headers={'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
@@ -30,3 +30,6 @@ def indent(text):
     for l in text.splitlines():
         s += "\t%s\n" % l
     return s
+
+def AbsPath(relpath):
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))

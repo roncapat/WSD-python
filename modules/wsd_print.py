@@ -16,7 +16,7 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "pri": "http://schemas.microsoft.com/windows/2006/08/wdp/print"}
 
 def WSD_GetPrinterElements(hosted_print_service):
-    data = messageFromFile("ws-print_getprinterelements.xml", FROM=urn, TO=hosted_print_service.ep_ref_addr)
+    data = messageFromFile(AbsPath("../templates/ws-print_getprinterelements.xml"), FROM=urn, TO=hosted_print_service.ep_ref_addr)
     r = requests.post(hosted_print_service.ep_ref_addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
