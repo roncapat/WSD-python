@@ -93,11 +93,8 @@ class ScannerSourceSettings:
         s += "Maximum size:         (%d, %d)\n" % self.max_size
         return s
 
-class ScanTicket:
+class DocumentParams():
     def __init__(self):
-        self.job_name = ""
-        self.job_user_name = ""
-        self.job_info = ""
         self.format = ""
         self.compression_factor = ""
         self.images_num = 0
@@ -115,9 +112,6 @@ class ScanTicket:
         self.back = None
     def __str__(self):
         s = ""
-        s += "Job name:             %s\n" % self.job_name
-        s += "User name:            %s\n" % self.job_user_name
-        s += "Job info:             %s\n" % self.job_info
         s += "Format:               %s\n" % self.format
         s += "Compression factor:   %s\n" % self.compression_factor
         s += "Images count:         %d\n" % self.images_num
@@ -137,6 +131,51 @@ class ScanTicket:
         if self.back is not None:
             s += "Back side:\n"
             s += indent(str(self.back))
+        return s
+
+class ScanTicket:
+    def __init__(self):
+        self.job_name = ""
+        self.job_user_name = ""
+        self.job_info = ""
+        self.doc_params = None
+        
+    def __str__(self):
+        s = ""
+        s += "Job name:             %s\n" % self.job_name
+        s += "User name:            %s\n" % self.job_user_name
+        s += "Job info:             %s\n" % self.job_info
+        s += "Document parameters:\n"
+        s += indent(str(self.doc_params))
+        return s
+
+class ScanJob:
+    def __init__(self):
+        self.id = 0
+        self.token = ""
+        self.f_pixel_line = 0
+        self.f_num_lines = 0
+        self.f_byte_line = 0
+        self.b_pixel_line = None
+        self.b_num_lines = None
+        self.b_byte_line = None
+        self.doc_params = None
+
+    def __str__(self):
+        s = ""
+        s += "Job id:               %s\n" % self.id
+        s += "Job token:            %s\n" % self.token
+        s += "Front properties:\n"
+        s += "\tPixels/line:          %s\n" % self.f_pixel_line
+        s += "\tLines count:          %s\n" % self.f_num_lines
+        s += "\tBytes/line:           %s\n" % self.f_byte_line
+        if (self.b_pixel_line is not None):
+            s += "Back properties:\n"
+            s += "\tPixels/line:          %s\n" % self.b_pixel_line
+            s += "\tLines count:          %s\n" % self.b_num_lines
+            s += "\tBytes/line:           %s\n" % self.b_byte_line
+        s += "Document parameters:\n"
+        s += indent(str(self.doc_params))
         return s
 
 class MediaSide:
@@ -192,7 +231,112 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
 "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
 
+def parseScanTicket(stdTicket):
+    t = ScanTicket()
+    t.job_name = stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
+    t.job_user_name = stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
+    q = stdTicket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
+    if q is not None:
+        t.job_info = q.text
+    dp = stdTicket.find(".//sca:DocumentParameters", NSMAP)
+    t.doc_params = parseDocumentParams(dp)
+    return t
+
+def parseDocumentParams(dp):
+    dest = DocumentParams()
+    q = dp.find(".//sca:Format", NSMAP)
+    if q is not None:
+        dest.format = q.text
+    q = dp.find(".//sca:CompressionQualityFactor", NSMAP)
+    if q is not None:
+        dest.compression_factor = q.text
+    q = dp.find(".//sca:ImagesToTransfer", NSMAP)
+    if q is not None:
+        dest.images_num = int(q.text)
+    q = dp.find(".//sca:InputSource", NSMAP)
+    if q is not None:
+        dest.input_src = q.text
+    q = dp.find(".//sca:ContentType", NSMAP)
+    if q is not None:
+        dest.content_type = q.text
+    q = dp.find(".//sca:InputSize", NSMAP)
+    if q is not None:
+        b = q.find(".//sca:DocumentAutoDetect", NSMAP)
+        if b is not None:
+            dest.size_autodetect = True if b.text == 'true' or b.text == '1' else False
+        v1 = q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
+        v2 = q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
+        dest.input_size = (int(v1.text), int(v2.text))
+    q = dp.find(".//sca:Exposure", NSMAP)
+    if q is not None:
+        b = q.find(".//sca:AutoExposure", NSMAP)
+        if b is not None:
+            dest.auto_exposure = True if b.text == 'true' or b.text == '1' else False
+        dest.contrast = int(q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP).text)
+        dest.brightness = int(q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP).text)
+        dest.sharpness = int(q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP).text)
+    q = dp.find(".//sca:Scaling", NSMAP)
+    if q is not None:
+        v1 = q.find(".//sca:ScalingWidth", NSMAP)
+        v2 = q.find(".//sca:ScalingHeight", NSMAP)
+        dest.scaling = (int(v1.text), int(v2.text))
+    q = dp.find(".//sca:Rotation", NSMAP)
+    if q is not None:
+        dest.rotation = int(q.text)
+    q = dp.find(".//sca:MediaSides", NSMAP)
+    if q is not None:
+        f = q.find(".//sca:MediaFront", NSMAP)
+        s = MediaSide()
+        r = f.find(".//sca:ScanRegion", NSMAP)
+        if r is not None:
+            q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+            if q is not None:
+                s.offset = (int(q.text),s.offset[1])
+            q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+            if q is not None:
+                s.offset = (s.offset[0], int(q.text))
+            v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
+            v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+            s.size = (int(v1.text), int(v2.text))
+        q = f.find(".//sca:ColorProcessing", NSMAP)
+        if q is not None:
+            s.color = q.text
+        q = f.find(".//sca:Resolution/sca:Width", NSMAP)
+        s.res = (int(q.text),s.res[1])
+        q = f.find(".//sca:Resolution/sca:Height", NSMAP)
+        s.res = (s.res[0], int(q.text))
+        dest.front = s
+        
+        f = q.find(".//sca:MediaBack", NSMAP)
+        if f is not None:
+            s = MediaSide()
+            r = f.find(".sca:ScanRegion", NSMAP)
+            if r is not None:
+                q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+                if q is not None:
+                    s.offset = (int(q.text),s.offset[1])
+                q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+                if q is not None:
+                    s.offset = (s.offset[0], int(q.text))
+                v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
+                v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+                s.size = (int(v1.text), int(v2.text))
+            q = f.find(".//sca:ColorProcessing", NSMAP)
+            if q is not None:
+                s.color = q.text
+            q = f.find(".//sca:Resolution/sca:Width", NSMAP)
+            s.res = (int(q.text),s.res[1])
+            q = f.find(".//sca:Resolution/sca:Height", NSMAP)
+            s.res = (s.res[0], int(q.text))
+            dest.back = s
+        else:
+            dest.back = copy.deepcopy(dest.front)
+    return dest
+
 def WSD_GetScannerElements(hosted_scan_service):
+
+    #TODO: handle error messages
+
     data = messageFromFile("ws-scan_getscannerelements.xml", FROM=urn, TO=hosted_scan_service.ep_ref_addr)
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
@@ -332,101 +476,9 @@ def WSD_GetScannerElements(hosted_scan_service):
             sss.max_size = (int(v1.text), int(v2.text))
             sc.back_adf = sss
 
-    t = ScanTicket()
-    t.job_name = stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
-    t.job_user_name = stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
-    q = stdTicket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
-    if q is not None:
-        t.job_info = q.text
-    dp = stdTicket.find(".//sca:DocumentParameters", NSMAP)
-    q = dp.find(".//sca:Format", NSMAP)
-    if q is not None:
-        t.format = q.text
-    q = dp.find(".//sca:CompressionQualityFactor", NSMAP)
-    if q is not None:
-        t.compression_factor = q.text
-    q = dp.find(".//sca:ImagesToTransfer", NSMAP)
-    if q is not None:
-        t.images_num = int(q.text)
-    q = dp.find(".//sca:InputSource", NSMAP)
-    if q is not None:
-        t.input_src = q.text
-    q = dp.find(".//sca:ContentType", NSMAP)
-    if q is not None:
-        t.content_type = q.text
-    q = dp.find(".//sca:InputSize", NSMAP)
-    if q is not None:
-        b = q.find(".//sca:DocumentAutoDetect", NSMAP)
-        if b is not None:
-            t.size_autodetect = True if b.text == 'true' or b.text == '1' else False
-        v1 = q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
-        v2 = q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
-        t.input_size = (int(v1.text), int(v2.text))
-    q = dp.find(".//sca:Exposure", NSMAP)
-    if q is not None:
-        b = q.find(".//sca:AutoExposure", NSMAP)
-        if b is not None:
-            t.auto_exposure = True if b.text == 'true' or b.text == '1' else False
-        t.contrast = int(q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP).text)
-        t.brightness = int(q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP).text)
-        t.sharpness = int(q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP).text)
-    q = dp.find(".//sca:Scaling", NSMAP)
-    if q is not None:
-        v1 = q.find(".//sca:ScalingWidth", NSMAP)
-        v2 = q.find(".//sca:ScalingHeight", NSMAP)
-        t.scaling = (int(v1.text), int(v2.text))
-    q = dp.find(".//sca:Rotation", NSMAP)
-    if q is not None:
-        t.rotation = int(q.text)
-    q = dp.find(".//sca:MediaSides", NSMAP)
-    if q is not None:
-        f = q.find(".//sca:MediaFront", NSMAP)
-        s = MediaSide()
-        r = f.find(".//sca:ScanRegion", NSMAP)
-        if r is not None:
-            q = r.find(".//sca:ScanRegionXOffset", NSMAP)
-            if q is not None:
-                s.offset = (int(q.text),s.offset[1])
-            q = r.find(".//sca:ScanRegionYOffset", NSMAP)
-            if q is not None:
-                s.offset = (s.offset[0], int(q.text))
-            v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
-            v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
-            s.size = (int(v1.text), int(v2.text))
-        q = f.find(".//sca:ColorProcessing", NSMAP)
-        if q is not None:
-            s.color = q.text
-        q = f.find(".//sca:Resolution/sca:Width", NSMAP)
-        s.res = (int(q.text),s.res[1])
-        q = f.find(".//sca:Resolution/sca:Height", NSMAP)
-        s.res = (s.res[0], int(q.text))
-        t.front = s
-        
-        f = q.find(".//sca:MediaBack", NSMAP)
-        if f is not None:
-            s = MediaSide()
-            r = f.find(".sca:ScanRegion", NSMAP)
-            if r is not None:
-                q = r.find(".//sca:ScanRegionXOffset", NSMAP)
-                if q is not None:
-                    s.offset = (int(q.text),s.offset[1])
-                q = r.find(".//sca:ScanRegionYOffset", NSMAP)
-                if q is not None:
-                    s.offset = (s.offset[0], int(q.text))
-                v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
-                v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
-                s.size = (int(v1.text), int(v2.text))
-            q = f.find(".//sca:ColorProcessing", NSMAP)
-            if q is not None:
-                s.color = q.text
-            q = f.find(".//sca:Resolution/sca:Width", NSMAP)
-            s.res = (int(q.text),s.res[1])
-            q = f.find(".//sca:Resolution/sca:Height", NSMAP)
-            s.res = (s.res[0], int(q.text))
-            t.back = s
-        else:
-            t.back = copy.deepcopy(t.front)
-    sc.std_ticket = t
+    
+    
+    sc.std_ticket = parseScanTicket(stdTicket)
 
     return sc
 
@@ -434,35 +486,35 @@ def WSD_ValidateScanTicket(hosted_scan_service, ticket):
     params = {'JOB_NAME': ticket.job_name,
               'USER_NAME': ticket.job_user_name,
               'JOB_INFO':ticket.job_info,
-              'FORMAT':ticket.format,
-              'COMPRESSION_FACTOR':ticket.compression_factor,
-              'IMG_NUM':ticket.images_num,
-              'INPUT_SRC':ticket.input_src,
-              'CONTENT_TYPE':ticket.content_type,
-              'SIZE_AUTODETEC':ticket.size_autodetect,
-              'INPUT_W':ticket.input_size[0],
-              'INPUT_H':ticket.input_size[1],
-              'AUTO_EXPOSURE':ticket.auto_exposure,
-              'CONTRAST':ticket.contrast,
-              'BRIGHTNESS':ticket.brightness,
-              'SHARPNESS':ticket.sharpness,
-              'SCALING_W':ticket.scaling[0],
-              'SCALING_H':ticket.scaling[1],
-              'ROTATION':ticket.rotation,
-              'FRONT_X_OFFSET':ticket.front.offset[0],
-              'FRONT_Y_OFFSET':ticket.front.offset[1],
-              'FRONT_SIZE_W':ticket.front.size[0],
-              'FRONT_SIZE_H':ticket.front.size[1],
-              'FRONT_COLOR':ticket.front.color,
-              'FRONT_RES_W':ticket.front.res[0],
-              'FRONT_RES_H':ticket.front.res[1],
-              'BACK_X_OFFSET':ticket.back.offset[0],
-              'BACK_Y_OFFSET':ticket.back.offset[1],
-              'BACK_SIZE_W':ticket.back.size[0],
-              'BACK_SIZE_H':ticket.back.size[1],
-              'BACK_COLOR':ticket.back.color,
-              'BACK_RES_W':ticket.back.res[0],
-              'BACK_RES_H':ticket.back.res[1]
+              'FORMAT':ticket.doc_params.format,
+              'QUALITY_FACTOR':ticket.doc_params.compression_factor,
+              'IMG_NUM':ticket.doc_params.images_num,
+              'INPUT_SRC':ticket.doc_params.input_src,
+              'CONTENT_TYPE':ticket.doc_params.content_type,
+              'SIZE_AUTODETECT':ticket.doc_params.size_autodetect,
+              'INPUT_W':ticket.doc_params.input_size[0],
+              'INPUT_H':ticket.doc_params.input_size[1],
+              'AUTO_EXPOSURE':ticket.doc_params.auto_exposure,
+              'CONTRAST':ticket.doc_params.contrast,
+              'BRIGHTNESS':ticket.doc_params.brightness,
+              'SHARPNESS':ticket.doc_params.sharpness,
+              'SCALING_W':ticket.doc_params.scaling[0],
+              'SCALING_H':ticket.doc_params.scaling[1],
+              'ROTATION':ticket.doc_params.rotation,
+              'FRONT_X_OFFSET':ticket.doc_params.front.offset[0],
+              'FRONT_Y_OFFSET':ticket.doc_params.front.offset[1],
+              'FRONT_SIZE_W':ticket.doc_params.front.size[0],
+              'FRONT_SIZE_H':ticket.doc_params.front.size[1],
+              'FRONT_COLOR':ticket.doc_params.front.color,
+              'FRONT_RES_W':ticket.doc_params.front.res[0],
+              'FRONT_RES_H':ticket.doc_params.front.res[1],
+              'BACK_X_OFFSET':ticket.doc_params.back.offset[0],
+              'BACK_Y_OFFSET':ticket.doc_params.back.offset[1],
+              'BACK_SIZE_W':ticket.doc_params.back.size[0],
+              'BACK_SIZE_H':ticket.doc_params.back.size[1],
+              'BACK_COLOR':ticket.doc_params.back.color,
+              'BACK_RES_W':ticket.doc_params.back.res[0],
+              'BACK_RES_H':ticket.doc_params.back.res[1]
             }
     data = messageFromFile("ws-scan_validatescanticket.xml",
                            FROM=urn,
@@ -470,10 +522,99 @@ def WSD_ValidateScanTicket(hosted_scan_service, ticket):
                            **params)
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
+    #TODO: handle error messages
+
     if debug: print ('##\n## VALIDATE SCAN TICKET REQUEST\n##\n%s' % data)
 
     x = etree.fromstring(r.text)
     if debug: print ('##\n## VALIDATE SCAN TICKET RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    b = x.find(".//sca:ValidTicket", NSMAP)
+    is_valid = True if b.text == 'true' or b.text == '1' else False
+    if is_valid:
+        return (True, ticket)
+    else:
+        return (False, parseScanTicket(x.find(".//sca::ValidScanTicket", NSMAP)))
+
+def WSD_CreateScanJob(hosted_scan_service, ticket):
+    params = {'JOB_NAME': ticket.job_name,
+              'USER_NAME': ticket.job_user_name,
+              'JOB_INFO':ticket.job_info,
+              'FORMAT':ticket.doc_params.format,
+              'QUALITY_FACTOR':ticket.doc_params.compression_factor,
+              'IMG_NUM':ticket.doc_params.images_num,
+              'INPUT_SRC':ticket.doc_params.input_src,
+              'CONTENT_TYPE':ticket.doc_params.content_type,
+              'SIZE_AUTODETECT':ticket.doc_params.size_autodetect,
+              'INPUT_W':ticket.doc_params.input_size[0],
+              'INPUT_H':ticket.doc_params.input_size[1],
+              'AUTO_EXPOSURE':ticket.doc_params.auto_exposure,
+              'CONTRAST':ticket.doc_params.contrast,
+              'BRIGHTNESS':ticket.doc_params.brightness,
+              'SHARPNESS':ticket.doc_params.sharpness,
+              'SCALING_W':ticket.doc_params.scaling[0],
+              'SCALING_H':ticket.doc_params.scaling[1],
+              'ROTATION':ticket.doc_params.rotation,
+              'FRONT_X_OFFSET':ticket.doc_params.front.offset[0],
+              'FRONT_Y_OFFSET':ticket.doc_params.front.offset[1],
+              'FRONT_SIZE_W':ticket.doc_params.front.size[0],
+              'FRONT_SIZE_H':ticket.doc_params.front.size[1],
+              'FRONT_COLOR':ticket.doc_params.front.color,
+              'FRONT_RES_W':ticket.doc_params.front.res[0],
+              'FRONT_RES_H':ticket.doc_params.front.res[1],
+              'BACK_X_OFFSET':ticket.doc_params.back.offset[0],
+              'BACK_Y_OFFSET':ticket.doc_params.back.offset[1],
+              'BACK_SIZE_W':ticket.doc_params.back.size[0],
+              'BACK_SIZE_H':ticket.doc_params.back.size[1],
+              'BACK_COLOR':ticket.doc_params.back.color,
+              'BACK_RES_W':ticket.doc_params.back.res[0],
+              'BACK_RES_H':ticket.doc_params.back.res[1]
+        }
+    data = messageFromFile("ws-scan_createscanjob.xml",
+                           FROM=urn,
+                           TO=hosted_scan_service.ep_ref_addr,
+                           **params)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    if debug: print ('##\n## CREATE SCAN JOB REQUEST\n##\n%s' % data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## CREATE SCAN JOB RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    j = ScanJob()
+    x = x.find(".//sca:CreateScanJobResponse", NSMAP)
+    j.id = int(x.find(".//sca:JobId", NSMAP).text)
+    j.token = x.find(".//sca:JobToken", NSMAP).text
+    q = x.find(".//sca:ImageInformation/sca:MediaFrontImageInfo", NSMAP)
+    j.f_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
+    j.f_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
+    j.f_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
+    q = x.find(".//sca:ImageInformation/sca:MediaBackImageInfo", NSMAP)
+    if q is not None:
+        j.b_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
+        j.b_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
+        j.b_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
+    dp = x.find(".//sca:DocumentFinalParameters", NSMAP)
+    j.doc_params = parseDocumentParams(dp)
+
+    return j
+
+def WSD_RetrieveImage(hosted_scan_service, job):
+    data = messageFromFile("ws-scan_retrieveimage.xml",
+                       FROM=urn,
+                       TO=hosted_scan_service.ep_ref_addr,
+                       JOB_ID=job.id,
+                       JOB_TOKEN=job.token,
+                       DOC_DESCR=job.descr)
+
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    if debug: print ('##\n## RETRIEVE IMAGE REQUEST\n##\n%s' % data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n')
     if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
 
 if __name__ == "__main__":
@@ -489,5 +630,8 @@ if __name__ == "__main__":
                 print(ti)
                 print(b)
                 print(sc)
-                debug = True
-                WSD_ValidateScanTicket(b, sc.std_ticket)
+                (valid, ticket) = WSD_ValidateScanTicket(b, sc.std_ticket)
+                if valid:
+                    j = WSD_CreateScanJob(b, ticket)
+                    print (j)
+                    debug = True
