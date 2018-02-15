@@ -131,6 +131,18 @@ def parseScannerSourceSettings(se, name):
     sss.max_size = (int(v1.text), int(v2.text))
     return sss
 
+def parseJobStatus(js):
+    j = JobStatus()
+    j.id = int(js.find("sca:JobId", NSMAP).text)
+    j.state = js.find("sca:JobState", NSMAP).text
+    j.reasons = [x.text for x in js.findall("sca:JobStateReasons", NSMAP)]
+    j.scans_completed = int(js.find("sca:ScansCompleted", NSMAP).text)
+    q = js.find("sca:JobCreatedTime", NSMAP)
+    j.creation_time = q.text if q is not None else ""
+    q = js.find("sca:JobCompletedTime", NSMAP)
+    j.completed_time = q.text if q is not None else ""
+    return j
+    
 def WSD_GetScannerElements(hosted_scan_service):
 
     #TODO: handle error messages
@@ -328,33 +340,62 @@ def WSD_GetJobElements(hosted_scan_service, job):
     if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
 
     js = x.find(".//sca:JobStatus", NSMAP)
-    st = x.find(".//sca:ScanTicket", NSMAP)
-    ds = x.find(".//sca:Documents", NSMAP)
+    j = parseJobStatus(js)
 
-    j = JobStatus()
-    j.id = int(js.find("sca:JobId", NSMAP).text)
-    j.state = js.find("sca:JobState", NSMAP).text
-    j.reasons = [x.text for x in js.findall("sca:JobStateReasons", NSMAP)]
-    j.scans_completed = int(js.find("sca:ScansCompleted", NSMAP).text)
-    q = js.find("sca:JobCreatedTime", NSMAP)
-    j.creation_time = q.text if q is not None else ""
-    q = js.find("sca:JobCompletedTime", NSMAP)
-    j.completed_time = q.text if q is not None else ""
-    
+    st = x.find(".//sca:ScanTicket", NSMAP)    
     ticket = parseScanTicket(st)
 
+    ds = x.find(".//sca:Documents", NSMAP)
     dfp = ds.find("sca:DocumentFinalParameters", NSMAP)
     dp = parseDocumentParams(dfp)
-
     dl = [x.text for x in dfp.findall("sca:Document/sca:DocumentDescription/sca:DocumentName", NSMAP)]
 
     return (j, ticket, dp, dl)
 
 def WSD_GetActiveJobs(hosted_scan_service):
-    pass
+    data = messageFromFile(AbsPath("../templates/ws-scan_getactivejobs.xml"),
+                       FROM=urn,
+                       TO=hosted_scan_service.ep_ref_addr)
 
-def WSD_GetJobHistory(hosted_Scan_service):
-    pass
+    if debug: print ('##\n## GET ACTIVE JOBS REQUEST\n##\n%s\n' % data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## GET ACTIVE JOBS RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    jsl = []
+    for y in x.findall(".//sca:JobSummary", NSMAP):
+        jsum = JobSummary()
+        jsum.name = y.find("sca:JobName", NSMAP).text
+        jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
+        jsum.status = parseJobStatus(y)
+        jsl.append(jsum)
+
+    return jsl
+
+
+def WSD_GetJobHistory(hosted_scan_service):
+    data = messageFromFile(AbsPath("../templates/ws-scan_getjobhistory.xml"),
+                       FROM=urn,
+                       TO=hosted_scan_service.ep_ref_addr)
+
+    if debug: print ('##\n## GET JOB HISTORY REQUEST\n##\n%s\n' % data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## GET JOB HISTORY RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    jsl = []
+    for y in x.findall(".//sca:JobSummary", NSMAP):
+        jsum = JobSummary()
+        jsum.name = y.find("sca:JobName", NSMAP).text
+        jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
+        jsum.status = parseJobStatus(y)
+        jsl.append(jsum)
+
+    return jsl
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
@@ -378,4 +419,9 @@ if __name__ == "__main__":
                     print (t)
                     print (dp)
                     print (dl)
+                    l = WSD_GetActiveJobs(b)
+                    print (l[0])
+                    l = WSD_GetJobHistory(b)
+                    for i in l:
+                        print (i)
                     WSD_RetrieveImage(b,j, "test.jpeg")

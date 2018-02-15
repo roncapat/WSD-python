@@ -293,6 +293,18 @@ class JobStatus:
         s += "Job completed at:     %s\n" % self.completed_time
         return s
 
+class JobSummary:
+    def __init__(self):
+        self.name = ""
+        self.user_name = ""
+        self.status = JobStatus()
+    def __str__(self):
+        s = ""
+        s += "Job name:               %s\n" % self.name
+        s += "User name:              %s\n" % self.user_name
+        s += str(self.status)
+        return s
+
 class MediaSide:
     def __init__(self):
         self.offset = (0,0)
