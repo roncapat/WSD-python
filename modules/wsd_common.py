@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #-*- encoding: utf-8 -*-
 
-import argparse, uuid, os
+import argparse, uuid, os, requests
+import lxml.etree as etree
 
 headers={'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
@@ -33,3 +34,14 @@ def indent(text):
 
 def AbsPath(relpath):
     return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))
+
+def submitRequest(addr, xml_template, fields_map, op_name):
+    data = messageFromFile(AbsPath("../templates/%s" % xml_template), **fields_map)
+
+    if debug: print ('##\n## %s REQUEST\n##\n%s\n' % (op_name, data))
+    r = requests.post(addr, headers=headers, data=data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## %s RESPONSE\n##\n', op_name)
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    return x

@@ -145,14 +145,12 @@ def parseJobStatus(js):
     
 def WSD_GetScannerElements(hosted_scan_service):
 
-    #TODO: handle error messages
-
-    data = messageFromFile(AbsPath("../templates/ws-scan_getscannerelements.xml"), FROM=urn, TO=hosted_scan_service.ep_ref_addr)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET SCANNER ELEMENTS RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_getscannerelements.xml",
+                      fields,
+                      "GET SCANNER ELEMENTS")
 
     re = x.find(".//sca:ScannerElements", NSMAP)
     scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
@@ -236,20 +234,13 @@ def WSD_GetScannerElements(hosted_scan_service):
 
 def WSD_ValidateScanTicket(hosted_scan_service, ticket):
 
-    data = messageFromFile(AbsPath("../templates/ws-scan_validatescanticket.xml"),
-                           FROM=urn,
-                           TO=hosted_scan_service.ep_ref_addr,
-                           **ticket.asMap())
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    #TODO: handle error messages
-
-    if debug: print ('##\n## VALIDATE SCAN TICKET REQUEST\n##\n%s' % data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## VALIDATE SCAN TICKET RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
-
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_validatescanticket.xml",
+                      {**fields, **ticket.asMap()},
+                      "VALIDATE SCAN TICKET")
+    
     b = x.find(".//sca:ValidTicket", NSMAP)
     is_valid = True if b.text == 'true' or b.text == '1' else False
     if is_valid:
@@ -258,19 +249,14 @@ def WSD_ValidateScanTicket(hosted_scan_service, ticket):
         return (False, parseScanTicket(x.find(".//sca::ValidScanTicket", NSMAP)))
 
 def WSD_CreateScanJob(hosted_scan_service, ticket):
-    
-    data = messageFromFile(AbsPath("../templates/ws-scan_createscanjob.xml"),
-                           FROM=urn,
-                           TO=hosted_scan_service.ep_ref_addr,
-                           **ticket.asMap())
-    
-    if debug: print ('##\n## CREATE SCAN JOB REQUEST\n##\n%s' % data)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## CREATE SCAN JOB RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
-
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_createscanjob.xml",
+                      {**fields, **ticket.asMap()},
+                      "CREATE SCAN JOB")
+    
     j = ScanJob()
     x = x.find(".//sca:CreateScanJobResponse", NSMAP)
     j.id = int(x.find(".//sca:JobId", NSMAP).text)
@@ -290,6 +276,7 @@ def WSD_CreateScanJob(hosted_scan_service, ticket):
     return j
 
 def WSD_RetrieveImage(hosted_scan_service, job, docname):
+
     data = messageFromFile(AbsPath("../templates/ws-scan_retrieveimage.xml"),
                        FROM=urn,
                        TO=hosted_scan_service.ep_ref_addr,
@@ -311,33 +298,27 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
 
 
 def WSD_CancelJob(hosted_scan_service, job):
-    data = messageFromFile(AbsPath("../templates/ws-scan_canceljob.xml"),
-                       FROM=urn,
-                       TO=hosted_scan_service.ep_ref_addr,
-                       JOB_ID=job.id)
 
-    if debug: print ('##\n## CANCEL JOB REQUEST\n##\n%s\n' % data)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## CANCEL JOB RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr,
+              "JOB_ID":job.id}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_canceljob.xml",
+                      fields,
+                      "CANCEL JOB")
 
     x.find(".//sca:ClientErrorJobIdNotFound", NSMAP)
     return (x is None)
 
 def WSD_GetJobElements(hosted_scan_service, job):
-    data = messageFromFile(AbsPath("../templates/ws-scan_getjobelements.xml"),
-                       FROM=urn,
-                       TO=hosted_scan_service.ep_ref_addr,
-                       JOB_ID=job.id)
 
-    if debug: print ('##\n## GET JOB ELEMENTS REQUEST\n##\n%s\n' % data)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET JOB ELEMENTS RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr,
+              "JOB_ID":job.id}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_getjobelements.xml",
+                      fields,
+                      "GET JOB ELEMENTS")
 
     js = x.find(".//sca:JobStatus", NSMAP)
     j = parseJobStatus(js)
@@ -353,17 +334,14 @@ def WSD_GetJobElements(hosted_scan_service, job):
     return (j, ticket, dp, dl)
 
 def WSD_GetActiveJobs(hosted_scan_service):
-    data = messageFromFile(AbsPath("../templates/ws-scan_getactivejobs.xml"),
-                       FROM=urn,
-                       TO=hosted_scan_service.ep_ref_addr)
 
-    if debug: print ('##\n## GET ACTIVE JOBS REQUEST\n##\n%s\n' % data)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET ACTIVE JOBS RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
-
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_getactivejobs.xml",
+                      fields,
+                      "GET ACTIVE JOBS")
+    
     jsl = []
     for y in x.findall(".//sca:JobSummary", NSMAP):
         jsum = JobSummary()
@@ -376,17 +354,14 @@ def WSD_GetActiveJobs(hosted_scan_service):
 
 
 def WSD_GetJobHistory(hosted_scan_service):
-    data = messageFromFile(AbsPath("../templates/ws-scan_getjobhistory.xml"),
-                       FROM=urn,
-                       TO=hosted_scan_service.ep_ref_addr)
 
-    if debug: print ('##\n## GET JOB HISTORY REQUEST\n##\n%s\n' % data)
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
-
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET JOB HISTORY RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
-
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-scan_getjobhistory.xml",
+                      fields,
+                      "GET JOB HISTORY")
+    
     jsl = []
     for y in x.findall(".//sca:JobSummary", NSMAP):
         jsum = JobSummary()

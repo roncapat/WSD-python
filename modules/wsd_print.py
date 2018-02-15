@@ -16,12 +16,13 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "pri": "http://schemas.microsoft.com/windows/2006/08/wdp/print"}
 
 def WSD_GetPrinterElements(hosted_print_service):
-    data = messageFromFile(AbsPath("../templates/ws-print_getprinterelements.xml"), FROM=urn, TO=hosted_print_service.ep_ref_addr)
-    r = requests.post(hosted_print_service.ep_ref_addr, headers=headers, data=data)
 
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET PRINTER ELEMENTS RESPONSE\n##\n')
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-print_getprinterelements.xml",
+                      fields,
+                      "GET PRINTER ELEMENTS")
 
 
 if __name__ == "__main__":

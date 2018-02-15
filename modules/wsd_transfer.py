@@ -20,13 +20,14 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "df": "http://schemas.microsoft.com/windows/2008/09/devicefoundation"}
 
 def WSD_Get(target_service):
-    data = messageFromFile(AbsPath("../templates/ws-transfer_get.xml"), FROM=urn, TO=target_service.ep_ref_addr)
-    r = requests.post(target_service.xaddrs[0], headers=headers, data=data)
 
-    #print(r.status_code, r.reason)
-    x = etree.fromstring(r.text)
-    if debug: print ('##\n## GET RESPONSE\n## %s\n##\n' % target_service.ep_ref_addr)
-    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submitRequest(hosted_scan_service.ep_ref_addr,
+                      "ws-transfer_get.xml",
+                      fields,
+                      "GET")
+
     meta = x.find(".//mex:Metadata", NSMAP)
     metaModel = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisModel']", NSMAP)
     metaDev = meta.find(".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisDevice']", NSMAP)
