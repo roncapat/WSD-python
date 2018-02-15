@@ -22,8 +22,8 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 def WSD_Get(target_service):
 
     fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
+              "TO": target_service.ep_ref_addr}
+    x = submitRequest(target_service.xaddrs[0],
                       "ws-transfer_get.xml",
                       fields,
                       "GET")
