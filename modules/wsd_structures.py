@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 #-*- encoding: utf-8 -*-
 
+from wsd_common import *
+
 class TargetService:
     def __init__(self):
         self.ep_ref_addr = ""
@@ -209,6 +211,40 @@ class ScanTicket:
         s += "Document parameters:\n"
         s += indent(str(self.doc_params))
         return s
+
+    def asMap(self):
+        return {'JOB_NAME': self.job_name,
+                'USER_NAME': self.job_user_name,
+                'JOB_INFO':self.job_info,
+                'FORMAT':self.doc_params.format,
+                'QUALITY_FACTOR':self.doc_params.compression_factor,
+                'IMG_NUM':self.doc_params.images_num,
+                'INPUT_SRC':self.doc_params.input_src,
+                'CONTENT_TYPE':self.doc_params.content_type,
+                'SIZE_AUTODETECT':self.doc_params.size_autodetect,
+                'INPUT_W':self.doc_params.input_size[0],
+                'INPUT_H':self.doc_params.input_size[1],
+                'AUTO_EXPOSURE':self.doc_params.auto_exposure,
+                'CONTRAST':self.doc_params.contrast,
+                'BRIGHTNESS':self.doc_params.brightness,
+                'SHARPNESS':self.doc_params.sharpness,
+                'SCALING_W':self.doc_params.scaling[0],
+                'SCALING_H':self.doc_params.scaling[1],
+                'ROTATION':self.doc_params.rotation,
+                'FRONT_X_OFFSET':self.doc_params.front.offset[0],
+                'FRONT_Y_OFFSET':self.doc_params.front.offset[1],
+                'FRONT_SIZE_W':self.doc_params.front.size[0],
+                'FRONT_SIZE_H':self.doc_params.front.size[1],
+                'FRONT_COLOR':self.doc_params.front.color,
+                'FRONT_RES_W':self.doc_params.front.res[0],
+                'FRONT_RES_H':self.doc_params.front.res[1],
+                'BACK_X_OFFSET':self.doc_params.back.offset[0],
+                'BACK_Y_OFFSET':self.doc_params.back.offset[1],
+                'BACK_SIZE_W':self.doc_params.back.size[0],
+                'BACK_SIZE_H':self.doc_params.back.size[1],
+                'BACK_COLOR':self.doc_params.back.color,
+                'BACK_RES_W':self.doc_params.back.res[0],
+                'BACK_RES_H':self.doc_params.back.res[1] }
 
 class ScanJob:
     def __init__(self):

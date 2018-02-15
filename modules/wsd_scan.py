@@ -29,6 +29,28 @@ def parseScanTicket(stdTicket):
     t.doc_params = parseDocumentParams(dp)
     return t
 
+def parseMediaSide(ms):
+    s = MediaSide()
+    r = ms.find(".//sca:ScanRegion", NSMAP)
+    if r is not None:
+        q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+        if q is not None:
+            s.offset = (int(q.text),s.offset[1])
+        q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+        if q is not None:
+            s.offset = (s.offset[0], int(q.text))
+        v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
+        v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+        s.size = (int(v1.text), int(v2.text))
+    q = ms.find(".//sca:ColorProcessing", NSMAP)
+    if q is not None:
+        s.color = q.text
+    q = ms.find(".//sca:Resolution/sca:Width", NSMAP)
+    s.res = (int(q.text),s.res[1])
+    q = ms.find(".//sca:Resolution/sca:Height", NSMAP)
+    s.res = (s.res[0], int(q.text))
+    return s
+
 def parseDocumentParams(dp):
     dest = DocumentParams()
     q = dp.find(".//sca:Format", NSMAP)
@@ -73,52 +95,41 @@ def parseDocumentParams(dp):
     q = dp.find(".//sca:MediaSides", NSMAP)
     if q is not None:
         f = q.find(".//sca:MediaFront", NSMAP)
-        s = MediaSide()
-        r = f.find(".//sca:ScanRegion", NSMAP)
-        if r is not None:
-            q = r.find(".//sca:ScanRegionXOffset", NSMAP)
-            if q is not None:
-                s.offset = (int(q.text),s.offset[1])
-            q = r.find(".//sca:ScanRegionYOffset", NSMAP)
-            if q is not None:
-                s.offset = (s.offset[0], int(q.text))
-            v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
-            v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
-            s.size = (int(v1.text), int(v2.text))
-        q = f.find(".//sca:ColorProcessing", NSMAP)
-        if q is not None:
-            s.color = q.text
-        q = f.find(".//sca:Resolution/sca:Width", NSMAP)
-        s.res = (int(q.text),s.res[1])
-        q = f.find(".//sca:Resolution/sca:Height", NSMAP)
-        s.res = (s.res[0], int(q.text))
-        dest.front = s
+        dest.front = parseMediaSide(f)
         
         f = q.find(".//sca:MediaBack", NSMAP)
         if f is not None:
-            s = MediaSide()
-            r = f.find(".sca:ScanRegion", NSMAP)
-            if r is not None:
-                q = r.find(".//sca:ScanRegionXOffset", NSMAP)
-                if q is not None:
-                    s.offset = (int(q.text),s.offset[1])
-                q = r.find(".//sca:ScanRegionYOffset", NSMAP)
-                if q is not None:
-                    s.offset = (s.offset[0], int(q.text))
-                v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
-                v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
-                s.size = (int(v1.text), int(v2.text))
-            q = f.find(".//sca:ColorProcessing", NSMAP)
-            if q is not None:
-                s.color = q.text
-            q = f.find(".//sca:Resolution/sca:Width", NSMAP)
-            s.res = (int(q.text),s.res[1])
-            q = f.find(".//sca:Resolution/sca:Height", NSMAP)
-            s.res = (s.res[0], int(q.text))
-            dest.back = s
+            dest.back = parseMediaSide(f)
         else:
             dest.back = copy.deepcopy(dest.front)
     return dest
+
+def parseScannerCondition(sc):
+    c = ScannerCondition()
+    c.time = sc.find(".//sca:Time",NSMAP).text
+    c.name = sc.find(".//sca:Name",NSMAP).text
+    c.component = sc.find(".//sca:Component",NSMAP).text
+    c.severity = sc.find(".//sca:Severity",NSMAP).text
+    return c
+
+def parseScannerSourceSettings(se, name):
+    sss = ScannerSourceSettings()
+    v1 = se.find(".//sca:%sOpticalResolution/sca:Width" % name, NSMAP)
+    v2 = se.find(".//sca:%sOpticalResolution/sca:Height" % name, NSMAP)
+    sss.optical_res = (int(v1.text), int(v2.text))
+    q = se.findall(".//sca:%sResolutions/sca:Widths/sca:Width" % name, NSMAP)
+    sss.width_res = [x.text for x in q]
+    q = se.findall(".//sca:%sResolutions/sca:Heights/sca:Height" % name, NSMAP)
+    sss.height_res = [x.text for x in q]                                                                                        
+    q = se.findall(".//sca:%sColor/sca:ColorEntry" % name, NSMAP)
+    sss.color_modes = [x.text for x in q]  
+    v1 = se.find(".//sca:%sMinimumSize/sca:Width" % name, NSMAP)
+    v2 = se.find(".//sca:%sMinimumSize/sca:Height" % name, NSMAP)
+    sss.min_size = (int(v1.text), int(v2.text))
+    v1 = se.find(".//sca:%sMaximumSize/sca:Width" % name, NSMAP)
+    v2 = se.find(".//sca:%sMaximumSize/sca:Height" % name, NSMAP)
+    sss.max_size = (int(v1.text), int(v2.text))
+    return sss
 
 def WSD_GetScannerElements(hosted_scan_service):
 
@@ -151,11 +162,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     if ac is not None:
         dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
         for dc in dcl:
-            c = ScannerCondition()
-            c.time = dc.find(".//sca:Time",NSMAP).text
-            c.name = dc.find(".//sca:Name",NSMAP).text
-            c.component = dc.find(".//sca:Component",NSMAP).text
-            c.severity = dc.find(".//sca:Severity",NSMAP).text
+            c = parseScannerCondition(dc)
             sc.status.active_conditions.append(c)
     q = scaStatus.find(".//sca:ScannerStateReasons", NSMAP)
     if q is not None:
@@ -166,11 +173,7 @@ def WSD_GetScannerElements(hosted_scan_service):
     if q is not None:
         chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
         for che in chl:
-            c = ScannerCondition()
-            c.time = che.find(".//sca:Time",NSMAP).text
-            c.name = che.find(".//sca:Name",NSMAP).text
-            c.component = che.find(".//sca:Component",NSMAP).text
-            c.severity = che.find(".//sca:Severity",NSMAP).text
+            c = parseScannerCondition(che)
             sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )        
 
     ds = scaConfig.find(".//sca:DeviceSettings", NSMAP)
@@ -204,109 +207,27 @@ def WSD_GetScannerElements(hosted_scan_service):
     s.rotations = [x.text for x in q]
     sc.settings = s
     if pla is not None:
-        sss = ScannerSourceSettings()
-        v1 = pla.find(".//sca:PlatenOpticalResolution/sca:Width", NSMAP)
-        v2 = pla.find(".//sca:PlatenOpticalResolution/sca:Height", NSMAP)
-        sss.optical_res = (int(v1.text), int(v2.text))
-        q = pla.findall(".//sca:PlatenResolutions/sca:Widths/sca:Width", NSMAP)
-        sss.width_res = [x.text for x in q]
-        q = pla.findall(".//sca:PlatenResolutions/sca:Heights/sca:Height", NSMAP)
-        sss.height_res = [x.text for x in q]                                                                                        
-        q = pla.findall(".//sca:PlatenColor/sca:ColorEntry", NSMAP)
-        sss.color_modes = [x.text for x in q]  
-        v1 = pla.find(".//sca:PlatenMinimumSize/sca:Width", NSMAP)
-        v2 = pla.find(".//sca:PlatenMinimumSize/sca:Height", NSMAP)
-        sss.min_size = (int(v1.text), int(v2.text))
-        v1 = pla.find(".//sca:PlatenMaximumSize/sca:Width", NSMAP)
-        v2 = pla.find(".//sca:PlatenMaximumSize/sca:Height", NSMAP)
-        sss.max_size = (int(v1.text), int(v2.text))
-        sc.platen = sss
+        sc.platen = parseScannerSourceSettings(pla, "Platen")
     if adf is not None:
         q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
         sc.adf_duplex = True if q.text == 'true' or q.text == '1' else False
         f = adf.find(".//sca:ADFFront", NSMAP)
         b = adf.find(".//sca:ADFBack", NSMAP)
         if f is not None:
-            sss = ScannerSourceSettings()
-            v1 = f.find(".//sca:ADFOpticalResolution/sca:Width", NSMAP)
-            v2 = f.find(".//sca:ADFOpticalResolution/sca:Height", NSMAP)
-            sss.optical_res = (int(v1.text), int(v2.text))
-            q = f.findall(".//sca:ADFResolutions/sca:Widths/sca:Width", NSMAP)
-            sss.width_res = [x.text for x in q]
-            q = f.findall(".//sca:ADFResolutions/sca:Heights/sca:Height", NSMAP)
-            sss.height_res = [x.text for x in q]  
-            q = f.find(".//sca:ADFColor/sca:ColorEntry", NSMAP)
-            sss.color_modes = [x.text for x in q]
-            v1 = f.find(".//sca:ADFMinimumSize/sca:Width", NSMAP)
-            v2 = f.find(".//sca:ADFMinimumSize/sca:Height", NSMAP)
-            sss.min_size = (int(v1.text), int(v2.text))
-            v1 = f.find(".//sca:ADFMaximumSize/sca:Width", NSMAP)
-            v2 = f.find(".//sca:ADFMaximumSize/sca:Height", NSMAP)
-            sss.max_size = (int(v1.text), int(v2.text))
-            sc.front_adf = sss
+            sc.front_adf = parseScannerSourceSettings(f, "ADF")
         if b is not None:
-            sss = ScannerSourceSettings()
-            v1 = b.find(".//sca:ADFOpticalResolution/sca:Width", NSMAP)
-            v2 = b.find(".//sca:ADFOpticalResolution/sca:Height", NSMAP)
-            sss.optical_res = (int(v1.text), int(v2.text))
-            q = b.findall(".//sca:ADFResolutions/sca:Widths/sca:Width", NSMAP)
-            sss.width_res = [x.text for x in q]
-            q = b.findall(".//sca:ADFResolutions/sca:Heights/sca:Height", NSMAP)
-            sss.height_res = [x.text for x in q]  
-            q = b.find(".//sca:ADFColor/sca:ColorEntry", NSMAP)
-            sss.color_modes = [x.text for x in q]
-            v1 = b.find(".//sca:ADFMinimumSize/sca:Width", NSMAP)
-            v2 = b.find(".//sca:ADFMinimumSize/sca:Height", NSMAP)
-            sss.min_size = (int(v1.text), int(v2.text))
-            v1 = b.find(".//sca:ADFMaximumSize/sca:Width", NSMAP)
-            v2 = b.find(".//sca:ADFMaximumSize/sca:Height", NSMAP)
-            sss.max_size = (int(v1.text), int(v2.text))
-            sc.back_adf = sss
+            sc.back_adf = parseScannerSourceSettings(b, "ADF")
 
-    
-    
     sc.std_ticket = parseScanTicket(stdTicket)
 
     return sc
 
 def WSD_ValidateScanTicket(hosted_scan_service, ticket):
-    params = {'JOB_NAME': ticket.job_name,
-              'USER_NAME': ticket.job_user_name,
-              'JOB_INFO':ticket.job_info,
-              'FORMAT':ticket.doc_params.format,
-              'QUALITY_FACTOR':ticket.doc_params.compression_factor,
-              'IMG_NUM':ticket.doc_params.images_num,
-              'INPUT_SRC':ticket.doc_params.input_src,
-              'CONTENT_TYPE':ticket.doc_params.content_type,
-              'SIZE_AUTODETECT':ticket.doc_params.size_autodetect,
-              'INPUT_W':ticket.doc_params.input_size[0],
-              'INPUT_H':ticket.doc_params.input_size[1],
-              'AUTO_EXPOSURE':ticket.doc_params.auto_exposure,
-              'CONTRAST':ticket.doc_params.contrast,
-              'BRIGHTNESS':ticket.doc_params.brightness,
-              'SHARPNESS':ticket.doc_params.sharpness,
-              'SCALING_W':ticket.doc_params.scaling[0],
-              'SCALING_H':ticket.doc_params.scaling[1],
-              'ROTATION':ticket.doc_params.rotation,
-              'FRONT_X_OFFSET':ticket.doc_params.front.offset[0],
-              'FRONT_Y_OFFSET':ticket.doc_params.front.offset[1],
-              'FRONT_SIZE_W':ticket.doc_params.front.size[0],
-              'FRONT_SIZE_H':ticket.doc_params.front.size[1],
-              'FRONT_COLOR':ticket.doc_params.front.color,
-              'FRONT_RES_W':ticket.doc_params.front.res[0],
-              'FRONT_RES_H':ticket.doc_params.front.res[1],
-              'BACK_X_OFFSET':ticket.doc_params.back.offset[0],
-              'BACK_Y_OFFSET':ticket.doc_params.back.offset[1],
-              'BACK_SIZE_W':ticket.doc_params.back.size[0],
-              'BACK_SIZE_H':ticket.doc_params.back.size[1],
-              'BACK_COLOR':ticket.doc_params.back.color,
-              'BACK_RES_W':ticket.doc_params.back.res[0],
-              'BACK_RES_H':ticket.doc_params.back.res[1]
-            }
+
     data = messageFromFile(AbsPath("../templates/ws-scan_validatescanticket.xml"),
                            FROM=urn,
                            TO=hosted_scan_service.ep_ref_addr,
-                           **params)
+                           **ticket.asMap())
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
     #TODO: handle error messages
@@ -325,43 +246,11 @@ def WSD_ValidateScanTicket(hosted_scan_service, ticket):
         return (False, parseScanTicket(x.find(".//sca::ValidScanTicket", NSMAP)))
 
 def WSD_CreateScanJob(hosted_scan_service, ticket):
-    params = {'JOB_NAME': ticket.job_name,
-              'USER_NAME': ticket.job_user_name,
-              'JOB_INFO':ticket.job_info,
-              'FORMAT':ticket.doc_params.format,
-              'QUALITY_FACTOR':ticket.doc_params.compression_factor,
-              'IMG_NUM':ticket.doc_params.images_num,
-              'INPUT_SRC':ticket.doc_params.input_src,
-              'CONTENT_TYPE':ticket.doc_params.content_type,
-              'SIZE_AUTODETECT':ticket.doc_params.size_autodetect,
-              'INPUT_W':ticket.doc_params.input_size[0],
-              'INPUT_H':ticket.doc_params.input_size[1],
-              'AUTO_EXPOSURE':ticket.doc_params.auto_exposure,
-              'CONTRAST':ticket.doc_params.contrast,
-              'BRIGHTNESS':ticket.doc_params.brightness,
-              'SHARPNESS':ticket.doc_params.sharpness,
-              'SCALING_W':ticket.doc_params.scaling[0],
-              'SCALING_H':ticket.doc_params.scaling[1],
-              'ROTATION':ticket.doc_params.rotation,
-              'FRONT_X_OFFSET':ticket.doc_params.front.offset[0],
-              'FRONT_Y_OFFSET':ticket.doc_params.front.offset[1],
-              'FRONT_SIZE_W':ticket.doc_params.front.size[0],
-              'FRONT_SIZE_H':ticket.doc_params.front.size[1],
-              'FRONT_COLOR':ticket.doc_params.front.color,
-              'FRONT_RES_W':ticket.doc_params.front.res[0],
-              'FRONT_RES_H':ticket.doc_params.front.res[1],
-              'BACK_X_OFFSET':ticket.doc_params.back.offset[0],
-              'BACK_Y_OFFSET':ticket.doc_params.back.offset[1],
-              'BACK_SIZE_W':ticket.doc_params.back.size[0],
-              'BACK_SIZE_H':ticket.doc_params.back.size[1],
-              'BACK_COLOR':ticket.doc_params.back.color,
-              'BACK_RES_W':ticket.doc_params.back.res[0],
-              'BACK_RES_H':ticket.doc_params.back.res[1]
-        }
+    
     data = messageFromFile(AbsPath("../templates/ws-scan_createscanjob.xml"),
                            FROM=urn,
                            TO=hosted_scan_service.ep_ref_addr,
-                           **params)
+                           **ticket.asMap())
     
     if debug: print ('##\n## CREATE SCAN JOB REQUEST\n##\n%s' % data)
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
