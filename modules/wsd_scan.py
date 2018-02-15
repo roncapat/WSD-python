@@ -299,7 +299,7 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
 
 
 def WSD_CancelJob(hosted_scan_service, job):
-    data = messageFromFile(AbsPath("../templates/ws-scan_retrieveimage.xml"),
+    data = messageFromFile(AbsPath("../templates/ws-scan_canceljob.xml"),
                        FROM=urn,
                        TO=hosted_scan_service.ep_ref_addr,
                        JOB_ID=job.id)
@@ -315,7 +315,40 @@ def WSD_CancelJob(hosted_scan_service, job):
     return (x is None)
 
 def WSD_GetJobElements(hosted_scan_service, job):
-    pass
+    data = messageFromFile(AbsPath("../templates/ws-scan_getjobelements.xml"),
+                       FROM=urn,
+                       TO=hosted_scan_service.ep_ref_addr,
+                       JOB_ID=job.id)
+
+    if debug: print ('##\n## GET JOB ELEMENTS REQUEST\n##\n%s\n' % data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+
+    x = etree.fromstring(r.text)
+    if debug: print ('##\n## GET JOB ELEMENTS RESPONSE\n##\n')
+    if debug: print (etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+
+    js = x.find(".//sca:JobStatus", NSMAP)
+    st = x.find(".//sca:ScanTicket", NSMAP)
+    ds = x.find(".//sca:Documents", NSMAP)
+
+    j = JobStatus()
+    j.id = int(js.find("sca:JobId", NSMAP).text)
+    j.state = js.find("sca:JobState", NSMAP).text
+    j.reasons = [x.text for x in js.findall("sca:JobStateReasons", NSMAP)]
+    j.scans_completed = int(js.find("sca:ScansCompleted", NSMAP).text)
+    q = js.find("sca:JobCreatedTime", NSMAP)
+    j.creation_time = q.text if q is not None else ""
+    q = js.find("sca:JobCompletedTime", NSMAP)
+    j.completed_time = q.text if q is not None else ""
+    
+    ticket = parseScanTicket(st)
+
+    dfp = ds.find("sca:DocumentFinalParameters", NSMAP)
+    dp = parseDocumentParams(dfp)
+
+    dl = [x.text for x in dfp.findall("sca:Document/sca:DocumentDescription/sca:DocumentName", NSMAP)]
+
+    return (j, ticket, dp, dl)
 
 def WSD_GetActiveJobs(hosted_scan_service):
     pass
@@ -340,4 +373,9 @@ if __name__ == "__main__":
                 if valid:
                     j = WSD_CreateScanJob(b, ticket)
                     print (j)
+                    (js, t, dp, dl) = WSD_GetJobElements(b, j)
+                    print (js)
+                    print (t)
+                    print (dp)
+                    print (dl)
                     WSD_RetrieveImage(b,j, "test.jpeg")

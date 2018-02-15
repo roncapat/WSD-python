@@ -260,7 +260,7 @@ class ScanJob:
 
     def __str__(self):
         s = ""
-        s += "Job id:               %s\n" % self.id
+        s += "Job id:               %d\n" % self.id
         s += "Job token:            %s\n" % self.token
         s += "Front properties:\n"
         s += "\tPixels/line:          %s\n" % self.f_pixel_line
@@ -273,6 +273,24 @@ class ScanJob:
             s += "\tBytes/line:           %s\n" % self.b_byte_line
         s += "Document parameters:\n"
         s += indent(str(self.doc_params))
+        return s
+
+class JobStatus:
+    def __init__(self):
+        self.id = 0
+        self.state = ""
+        self.reasons = []
+        self.scans_completed = 0
+        self.creation_time = ""
+        self.completed_time = ""
+    def __str__(self):
+        s = ""
+        s += "Job id:               %d\n" % self.id
+        s += "Job state:            %s\n" % self.state
+        s += "State reasons:        %s\n" % ', '.join(self.reasons)
+        s += "Scans completed:      %d\n" % self.scans_completed
+        s += "Job created at:       %s\n" % self.creation_time
+        s += "Job completed at:     %s\n" % self.completed_time
         return s
 
 class MediaSide:
