@@ -4,12 +4,8 @@
 from wsd_common import *
 from wsd_structures import *
 
-import argparse
-import struct
-import socket
+import argparse, struct, socket, os, sqlite3, pickle
 import lxml.etree as etree
-
-
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
@@ -55,15 +51,47 @@ def WSD_Probe():
                 ts.meta_er = int(x.find(".//wsd:MetadataVersion", NSMAP).text)
                 targetServicesList.add(ts)
                 
-
-        print ("\nFound %d endpoints.\n" % len(targetServicesList))
     finally:
         sock.close()
         return targetServicesList
+
+def getDevices(cache=True, discovery=True):
+    d = set()
+    c = set()
+    
+    if discovery is True:
+        d = WSD_Probe()
+    
+    if cache is True:
+        # Open the DB, if exists, or create a new one
+        p = os.environ.get("WSD_CACHE_PATH", "")
+        if p == "":
+            p = os.path.expanduser("~/.wsdcache.db")
+            os.environ["WSD_CACHE_PATH"] = p
+        db = sqlite3.connect(p)
+        cursor = db.cursor()
+        cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (SerializedTarget TEXT);")
+        db.commit()
+
+        # Read entries from DB
+        cursor.execute("SELECT DISTINCT SerializedTarget FROM WsdCache")
+        for row in cursor:
+            c.add( pickle.loads(row[0].encode()) )
+
+        # Add discovered entries to DB
+        for i in d:
+            cursor.execute("INSERT INTO WsdCache(SerializedTarget) VALUES (?)", (pickle.dumps(i, 0).decode(),))
+        db.commit()
+
+        db.close()
+        
+        #TODO: validates db entries, some devices may have disappered from the local network
+
+    return set.union(c,d)
 
 if __name__ == "__main__":
     (debug, timeout) = parseCmdLine()
     urn = genUrn()
     debug = True
-    tsl = WSD_Probe()
+    tsl = getDevices()
     for a in tsl: print(a)
