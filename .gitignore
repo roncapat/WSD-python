@@ -3,3 +3,4 @@ specs/*
 *.pyc
 
 *.jpeg
+.idea/*

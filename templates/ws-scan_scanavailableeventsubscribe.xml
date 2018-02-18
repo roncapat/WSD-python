@@ -1,0 +1,34 @@
+<soap:Envelope
+        xmlns:soap="http://www.w3.org/2003/05/soap-envelope"
+        xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+        xmlns:wse="http://schemas.xmlsoap.org/ws/2004/08/eventing"
+        xmlns:wscn="http://schemas.microsoft.com/windows/2006/01/wdp/scan">
+    <soap:Header>
+        <wsa:To>{{TO}}</wsa:To>
+        <wsa:Action>
+            http://schemas.xmlsoap.org/ws/2004/08/eventing/Subscribe
+        </wsa:Action>
+        <wsa:MessageID>urn:uuid:52b04a16-55d6-4b8f-a23c-55759d11cea5</wsa:MessageID>
+    </soap:Header>
+    <soap:Body>
+        <wse:Subscribe>
+            <wse:Delivery>
+                <wse:NotifyTo>
+                    <wsa:Address>
+                        {{NOTIFY_ADDR}}
+                    </wsa:Address>
+                </wse:NotifyTo>
+            </wse:Delivery>
+            <wse:Expires>{{EXPIRES}}</wse:Expires>
+            <wse:Filter Dialect="http://schemas.xmlsoap.org/ws/2006/02/devprof/Action">
+                http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent
+            </wse:Filter>
+            <wscn:ScanDestinations>
+                <wscn:ScanDestination>
+                    <wscn:ClientDisplayString>{{DISPLAY_STR}}</wscn:ClientDisplayString>
+                    <wscn:ClientContext>{{CONTEXT}}</wscn:ClientContext>
+                </wscn:ScanDestination>
+            </wscn:ScanDestinations>
+        </wse:Subscribe>
+    </soap:Body>
+</soap:Envelope>

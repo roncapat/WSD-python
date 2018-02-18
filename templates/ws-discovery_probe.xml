@@ -1,5 +1,7 @@
 <?xml version='1.0' encoding='ASCII'?>
-<s:Envelope xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing" xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery" xmlns:i="http://printer.example.org/2003/imaging" xmlns:s="http://www.w3.org/2003/05/soap-envelope">
+<s:Envelope xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+            xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+            xmlns:s="http://www.w3.org/2003/05/soap-envelope">
     <s:Header>
         <a:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action>
         <a:MessageID>uuid:0a6dc791-2be6-4991-9af1-454778a1917a</a:MessageID>
@@ -11,6 +13,6 @@
     <s:Body>
         <d:Probe>
         </d:Probe>
-    </s:Body> 
+    </s:Body>
 </s:Envelope>
 
