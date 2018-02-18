@@ -288,13 +288,23 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
 
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
-    content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
-    m = email.message_from_bytes(content_with_header)
+    try:
+        x = etree.fromstring(r.text)
+        q = x.find(".//soap:Fault", NSMAP)
+        if q is not None:
+            e = q.find(".//soap:Code/soap:Subcode/soap:Value", NSMAP).text
+            if e == "wscn:ClientErrorNoImagesAvailable":
+                return False
+    except:
+        content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
+        m = email.message_from_bytes(content_with_header)
 
-    l = list(m.walk())
+        l = list(m.walk())
 
-    if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % l[1])
-    open(docname, "wb").write(l[2].get_payload(decode=True))
+        if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % l[1])
+        open(docname, "wb").write(l[2].get_payload(decode=True))
+        
+        return True
 
 
 def WSD_CancelJob(hosted_scan_service, job):
@@ -385,7 +395,10 @@ if __name__ == "__main__":
                 print(ti)
                 print(b)
                 print(sc)
-                (valid, ticket) = WSD_ValidateScanTicket(b, sc.std_ticket)
+                t = sc.std_ticket
+                t.doc_params.input_src="ADF"
+                t.doc_params.images_num = 0
+                (valid, ticket) = WSD_ValidateScanTicket(b, t)
                 if valid:
                     j = WSD_CreateScanJob(b, ticket)
                     print (j)
@@ -399,4 +412,6 @@ if __name__ == "__main__":
                     l = WSD_GetJobHistory(b)
                     for i in l:
                         print (i)
-                    WSD_RetrieveImage(b,j, "test.jpeg")
+                    o = 0
+                    while (WSD_RetrieveImage(b, j, "test_%d.jpeg" % o)):
+                        o = o + 1
