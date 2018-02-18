@@ -1,41 +1,37 @@
 #!/usr/bin/env python3
-#-*- encoding: utf-8 -*-
+# -*- encoding: utf-8 -*-
+
+import copy
+import email
 
 import wsd_discovery
 import wsd_transfer
-
-from wsd_common import *
 from wsd_structures import *
 
-import uuid
-import email
-import copy
-import argparse
-import requests
-import lxml.etree as etree
-
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
-"wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-"sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
+         "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
+         "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
 
-def parseScanTicket(stdTicket):
-    t = ScanTicket()
-    t.job_name = stdTicket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
-    t.job_user_name = stdTicket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
-    q = stdTicket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
+
+def parse_scan_ticket(std_ticket):
+    st = ScanTicket()
+    st.job_name = std_ticket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
+    st.job_user_name = std_ticket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
+    q = std_ticket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
     if q is not None:
-        t.job_info = q.text
-    dp = stdTicket.find(".//sca:DocumentParameters", NSMAP)
-    t.doc_params = parseDocumentParams(dp)
-    return t
+        st.job_info = q.text
+    dps = std_ticket.find(".//sca:DocumentParameters", NSMAP)
+    st.doc_params = parse_document_params(dps)
+    return st
 
-def parseMediaSide(ms):
+
+def parse_media_side(ms):
     s = MediaSide()
     r = ms.find(".//sca:ScanRegion", NSMAP)
     if r is not None:
         q = r.find(".//sca:ScanRegionXOffset", NSMAP)
         if q is not None:
-            s.offset = (int(q.text),s.offset[1])
+            s.offset = (int(q.text), s.offset[1])
         q = r.find(".//sca:ScanRegionYOffset", NSMAP)
         if q is not None:
             s.offset = (s.offset[0], int(q.text))
@@ -46,73 +42,76 @@ def parseMediaSide(ms):
     if q is not None:
         s.color = q.text
     q = ms.find(".//sca:Resolution/sca:Width", NSMAP)
-    s.res = (int(q.text),s.res[1])
+    s.res = (int(q.text), s.res[1])
     q = ms.find(".//sca:Resolution/sca:Height", NSMAP)
     s.res = (s.res[0], int(q.text))
     return s
 
-def parseDocumentParams(dp):
+
+def parse_document_params(dps):
     dest = DocumentParams()
-    q = dp.find(".//sca:Format", NSMAP)
+    q = dps.find(".//sca:Format", NSMAP)
     if q is not None:
         dest.format = q.text
-    q = dp.find(".//sca:CompressionQualityFactor", NSMAP)
+    q = dps.find(".//sca:CompressionQualityFactor", NSMAP)
     if q is not None:
         dest.compression_factor = q.text
-    q = dp.find(".//sca:ImagesToTransfer", NSMAP)
+    q = dps.find(".//sca:ImagesToTransfer", NSMAP)
     if q is not None:
         dest.images_num = int(q.text)
-    q = dp.find(".//sca:InputSource", NSMAP)
+    q = dps.find(".//sca:InputSource", NSMAP)
     if q is not None:
         dest.input_src = q.text
-    q = dp.find(".//sca:ContentType", NSMAP)
+    q = dps.find(".//sca:ContentType", NSMAP)
     if q is not None:
         dest.content_type = q.text
-    q = dp.find(".//sca:InputSize", NSMAP)
+    q = dps.find(".//sca:InputSize", NSMAP)
     if q is not None:
-        b = q.find(".//sca:DocumentAutoDetect", NSMAP)
-        if b is not None:
-            dest.size_autodetect = True if b.text == 'true' or b.text == '1' else False
+        autod = q.find(".//sca:DocumentAutoDetect", NSMAP)
+        if autod is not None:
+            dest.size_autodetect = True if autod.text == 'true' or autod.text == '1' else False
         v1 = q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
         v2 = q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
         dest.input_size = (int(v1.text), int(v2.text))
-    q = dp.find(".//sca:Exposure", NSMAP)
+    q = dps.find(".//sca:Exposure", NSMAP)
     if q is not None:
-        b = q.find(".//sca:AutoExposure", NSMAP)
-        if b is not None:
-            dest.auto_exposure = True if b.text == 'true' or b.text == '1' else False
+        autod = q.find(".//sca:AutoExposure", NSMAP)
+        if autod is not None:
+            dest.auto_exposure = True if autod.text == 'true' or autod.text == '1' else False
         dest.contrast = int(q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP).text)
         dest.brightness = int(q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP).text)
         dest.sharpness = int(q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP).text)
-    q = dp.find(".//sca:Scaling", NSMAP)
+    q = dps.find(".//sca:Scaling", NSMAP)
     if q is not None:
         v1 = q.find(".//sca:ScalingWidth", NSMAP)
         v2 = q.find(".//sca:ScalingHeight", NSMAP)
         dest.scaling = (int(v1.text), int(v2.text))
-    q = dp.find(".//sca:Rotation", NSMAP)
+    q = dps.find(".//sca:Rotation", NSMAP)
     if q is not None:
         dest.rotation = int(q.text)
-    q = dp.find(".//sca:MediaSides", NSMAP)
+    q = dps.find(".//sca:MediaSides", NSMAP)
     if q is not None:
         f = q.find(".//sca:MediaFront", NSMAP)
-        dest.front = parseMediaSide(f)
-        
+        dest.front = parse_media_side(f)
+
         f = q.find(".//sca:MediaBack", NSMAP)
         if f is not None:
-            dest.back = parseMediaSide(f)
+            dest.back = parse_media_side(f)
         else:
             dest.back = copy.deepcopy(dest.front)
     return dest
 
-def parseScannerCondition(sc):
+
+def parse_scanner_condition(scond):
     c = ScannerCondition()
-    c.time = sc.find(".//sca:Time",NSMAP).text
-    c.name = sc.find(".//sca:Name",NSMAP).text
-    c.component = sc.find(".//sca:Component",NSMAP).text
-    c.severity = sc.find(".//sca:Severity",NSMAP).text
+    c.time = scond.find(".//sca:Time", NSMAP).text
+    c.name = scond.find(".//sca:Name", NSMAP).text
+    c.component = scond.find(".//sca:Component", NSMAP).text
+    c.severity = scond.find(".//sca:Severity", NSMAP).text
     return c
 
-def parseScannerSourceSettings(se, name):
+
+def parse_scanner_source_settings(se, name):
     sss = ScannerSourceSettings()
     v1 = se.find(".//sca:%sOpticalResolution/sca:Width" % name, NSMAP)
     v2 = se.find(".//sca:%sOpticalResolution/sca:Height" % name, NSMAP)
@@ -120,9 +119,9 @@ def parseScannerSourceSettings(se, name):
     q = se.findall(".//sca:%sResolutions/sca:Widths/sca:Width" % name, NSMAP)
     sss.width_res = [x.text for x in q]
     q = se.findall(".//sca:%sResolutions/sca:Heights/sca:Height" % name, NSMAP)
-    sss.height_res = [x.text for x in q]                                                                                        
+    sss.height_res = [x.text for x in q]
     q = se.findall(".//sca:%sColor/sca:ColorEntry" % name, NSMAP)
-    sss.color_modes = [x.text for x in q]  
+    sss.color_modes = [x.text for x in q]
     v1 = se.find(".//sca:%sMinimumSize/sca:Width" % name, NSMAP)
     v2 = se.find(".//sca:%sMinimumSize/sca:Height" % name, NSMAP)
     sss.min_size = (int(v1.text), int(v2.text))
@@ -131,65 +130,68 @@ def parseScannerSourceSettings(se, name):
     sss.max_size = (int(v1.text), int(v2.text))
     return sss
 
-def parseJobStatus(js):
-    j = JobStatus()
-    j.id = int(js.find("sca:JobId", NSMAP).text)
-    j.state = js.find("sca:JobState", NSMAP).text
-    j.reasons = [x.text for x in js.findall("sca:JobStateReasons", NSMAP)]
-    j.scans_completed = int(js.find("sca:ScansCompleted", NSMAP).text)
-    q = js.find("sca:JobCreatedTime", NSMAP)
-    j.creation_time = q.text if q is not None else ""
-    q = js.find("sca:JobCompletedTime", NSMAP)
-    j.completed_time = q.text if q is not None else ""
-    return j
-    
-def WSD_GetScannerElements(hosted_scan_service):
 
+def parse_job_status(q):
+    jstatus = JobStatus()
+    jstatus.id = int(q.find("sca:JobId", NSMAP).text)
+    jstatus.state = q.find("sca:JobState", NSMAP).text
+    jstatus.reasons = [x.text for x in q.findall("sca:JobStateReasons", NSMAP)]
+    jstatus.scans_completed = int(q.find("sca:ScansCompleted", NSMAP).text)
+    q = q.find("sca:JobCreatedTime", NSMAP)
+    jstatus.creation_time = q.text if q is not None else ""
+    q = q.find("sca:JobCompletedTime", NSMAP)
+    jstatus.completed_time = q.text if q is not None else ""
+    return jstatus
+
+
+def wsd_get_scanner_elements(hosted_scan_service):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_getscannerelements.xml",
-                      fields,
-                      "GET SCANNER ELEMENTS")
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_getscannerelements.xml",
+                       fields,
+                       "GET SCANNER ELEMENTS")
 
     re = x.find(".//sca:ScannerElements", NSMAP)
-    scaStatus = re.find(".//sca:ScannerStatus", NSMAP)
-    scaConfig = re.find(".//sca:ScannerConfiguration", NSMAP)
-    scaDescr = re.find(".//sca:ScannerDescription", NSMAP)
-    stdTicket = re.find(".//sca:DefaultScanTicket", NSMAP)
-    
-    sc = ScannerService()
+    sca_status = re.find(".//sca:ScannerStatus", NSMAP)
+    sca_config = re.find(".//sca:ScannerConfiguration", NSMAP)
+    sca_descr = re.find(".//sca:ScannerDescription", NSMAP)
+    std_ticket = re.find(".//sca:DefaultScanTicket", NSMAP)
 
-    sc.name = scaDescr.find(".//sca:ScannerName", NSMAP).text
-    q = scaDescr.find(".//sca:ScannerInfo", NSMAP)
-    if q is not None: sc.info = q.text
-    q = scaDescr.find(".//sca:ScannerLocation", NSMAP)
-    if q is not None: sc.location = q.text
-    
-    sc.status.time = scaStatus.find(".//sca:ScannerCurrentTime", NSMAP).text
-    sc.status.state = scaStatus.find(".//sca:ScannerState", NSMAP).text
-    ac = scaStatus.find(".//sca:ActiveConditions", NSMAP)
+    scs = ScannerService()
+
+    scs.name = sca_descr.find(".//sca:ScannerName", NSMAP).text
+    q = sca_descr.find(".//sca:ScannerInfo", NSMAP)
+    if q is not None:
+        scs.info = q.text
+    q = sca_descr.find(".//sca:ScannerLocation", NSMAP)
+    if q is not None:
+        scs.location = q.text
+
+    scs.status.time = sca_status.find(".//sca:ScannerCurrentTime", NSMAP).text
+    scs.status.state = sca_status.find(".//sca:ScannerState", NSMAP).text
+    ac = sca_status.find(".//sca:ActiveConditions", NSMAP)
     if ac is not None:
         dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
         for dc in dcl:
-            c = parseScannerCondition(dc)
-            sc.status.active_conditions.append(c)
-    q = scaStatus.find(".//sca:ScannerStateReasons", NSMAP)
+            c = parse_scanner_condition(dc)
+            scs.status.active_conditions.append(c)
+    q = sca_status.find(".//sca:ScannerStateReasons", NSMAP)
     if q is not None:
         dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
         for sr in dsr:
-            sc.status.reasons.append(sr.text)
-    q = scaStatus.find(".//sca:ConditionHistory", NSMAP)
+            scs.status.reasons.append(sr.text)
+    q = sca_status.find(".//sca:ConditionHistory", NSMAP)
     if q is not None:
         chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
         for che in chl:
-            c = parseScannerCondition(che)
-            sc.status.conditions_history.append( (che.find(".//sca:ClearTime", NSMAP).text, c) )        
+            c = parse_scanner_condition(che)
+            scs.status.conditions_history.append((che.find(".//sca:ClearTime", NSMAP).text, c))
 
-    ds = scaConfig.find(".//sca:DeviceSettings", NSMAP)
-    pla = scaConfig.find(".//sca:Platen", NSMAP)
-    adf = scaConfig.find(".//sca:ADF", NSMAP)
-    ## .//sca:Film omitted
+    ds = sca_config.find(".//sca:DeviceSettings", NSMAP)
+    pla = sca_config.find(".//sca:Platen", NSMAP)
+    adf = sca_config.find(".//sca:ADF", NSMAP)
+    # .//sca:Film omitted
 
     s = ScannerSettings()
     q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
@@ -215,76 +217,77 @@ def WSD_GetScannerElements(hosted_scan_service):
     s.scaling_range_h = (int(v1.text), int(v2.text))
     q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
     s.rotations = [x.text for x in q]
-    sc.settings = s
+    scs.settings = s
     if pla is not None:
-        sc.platen = parseScannerSourceSettings(pla, "Platen")
+        scs.platen = parse_scanner_source_settings(pla, "Platen")
     if adf is not None:
         q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
-        sc.adf_duplex = True if q.text == 'true' or q.text == '1' else False
+        scs.adf_duplex = True if q.text == 'true' or q.text == '1' else False
         f = adf.find(".//sca:ADFFront", NSMAP)
-        b = adf.find(".//sca:ADFBack", NSMAP)
+        bk = adf.find(".//sca:ADFBack", NSMAP)
         if f is not None:
-            sc.front_adf = parseScannerSourceSettings(f, "ADF")
-        if b is not None:
-            sc.back_adf = parseScannerSourceSettings(b, "ADF")
+            scs.front_adf = parse_scanner_source_settings(f, "ADF")
+        if bk is not None:
+            scs.back_adf = parse_scanner_source_settings(bk, "ADF")
 
-    sc.std_ticket = parseScanTicket(stdTicket)
+    scs.std_ticket = parse_scan_ticket(std_ticket)
 
-    return sc
+    return scs
 
-def WSD_ValidateScanTicket(hosted_scan_service, ticket):
 
+def wsd_validate_scan_ticket(hosted_scan_service, tkt):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_validatescanticket.xml",
-                      {**fields, **ticket.asMap()},
-                      "VALIDATE SCAN TICKET")
-    
-    b = x.find(".//sca:ValidTicket", NSMAP)
-    is_valid = True if b.text == 'true' or b.text == '1' else False
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_validatescanticket.xml",
+                       {**fields, **tkt.as_map()},
+                       "VALIDATE SCAN TICKET")
+
+    v = x.find(".//sca:ValidTicket", NSMAP)
+    is_valid = True if v.text == 'true' or v.text == '1' else False
     if is_valid:
-        return (True, ticket)
+        return True, tkt
     else:
-        return (False, parseScanTicket(x.find(".//sca::ValidScanTicket", NSMAP)))
+        return False, parse_scan_ticket(x.find(".//sca::ValidScanTicket", NSMAP))
 
-def WSD_CreateScanJob(hosted_scan_service, ticket):
 
+def wsd_create_scan_job(hosted_scan_service, tkt):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_createscanjob.xml",
-                      {**fields, **ticket.asMap()},
-                      "CREATE SCAN JOB")
-    
-    j = ScanJob()
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_createscanjob.xml",
+                       {**fields, **tkt.as_map()},
+                       "CREATE SCAN JOB")
+
+    scnj = ScanJob()
     x = x.find(".//sca:CreateScanJobResponse", NSMAP)
-    j.id = int(x.find(".//sca:JobId", NSMAP).text)
-    j.token = x.find(".//sca:JobToken", NSMAP).text
+    scnj.id = int(x.find(".//sca:JobId", NSMAP).text)
+    scnj.token = x.find(".//sca:JobToken", NSMAP).text
     q = x.find(".//sca:ImageInformation/sca:MediaFrontImageInfo", NSMAP)
-    j.f_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
-    j.f_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
-    j.f_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
+    scnj.f_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
+    scnj.f_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
+    scnj.f_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
     q = x.find(".//sca:ImageInformation/sca:MediaBackImageInfo", NSMAP)
     if q is not None:
-        j.b_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
-        j.b_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
-        j.b_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
-    dp = x.find(".//sca:DocumentFinalParameters", NSMAP)
-    j.doc_params = parseDocumentParams(dp)
+        scnj.b_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
+        scnj.b_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
+        scnj.b_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
+    dpf = x.find(".//sca:DocumentFinalParameters", NSMAP)
+    scnj.doc_params = parse_document_params(dpf)
 
-    return j
+    return scnj
 
-def WSD_RetrieveImage(hosted_scan_service, job, docname):
 
-    data = messageFromFile(AbsPath("../templates/ws-scan_retrieveimage.xml"),
-                       FROM=urn,
-                       TO=hosted_scan_service.ep_ref_addr,
-                       JOB_ID=job.id,
-                       JOB_TOKEN=job.token,
-                       DOC_DESCR=docname)
-    
-    if debug: print ('##\n## RETRIEVE IMAGE REQUEST\n##\n%s\n' % data)
+def wsd_retrieve_image(hosted_scan_service, job, docname):
+    data = message_from_file(abs_path("../templates/ws-scan_retrieveimage.xml"),
+                             FROM=urn,
+                             TO=hosted_scan_service.ep_ref_addr,
+                             JOB_ID=job.id,
+                             JOB_TOKEN=job.token,
+                             DOC_DESCR=docname)
+
+    if debug:
+        print('##\n## RETRIEVE IMAGE REQUEST\n##\n%s\n' % data)
 
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
@@ -295,123 +298,123 @@ def WSD_RetrieveImage(hosted_scan_service, job, docname):
             e = q.find(".//soap:Code/soap:Subcode/soap:Value", NSMAP).text
             if e == "wscn:ClientErrorNoImagesAvailable":
                 return False
-    except:
+    finally:
         content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
         m = email.message_from_bytes(content_with_header)
 
-        l = list(m.walk())
+        ls = list(m.walk())
 
-        if debug: print ('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % l[1])
-        open(docname, "wb").write(l[2].get_payload(decode=True))
-        
+        if debug:
+            print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
+        open(docname, "wb").write(ls[2].get_payload(decode=True))
+
         return True
 
 
-def WSD_CancelJob(hosted_scan_service, job):
-
+def wsd_cancel_job(hosted_scan_service, job):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr,
-              "JOB_ID":job.id}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_canceljob.xml",
-                      fields,
-                      "CANCEL JOB")
+              "JOB_ID": job.id}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_canceljob.xml",
+                       fields,
+                       "CANCEL JOB")
 
     x.find(".//sca:ClientErrorJobIdNotFound", NSMAP)
-    return (x is None)
+    return x is None
 
-def WSD_GetJobElements(hosted_scan_service, job):
 
+def wsd_get_job_elements(hosted_scan_service, job):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr,
-              "JOB_ID":job.id}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_getjobelements.xml",
-                      fields,
-                      "GET JOB ELEMENTS")
+              "JOB_ID": job.id}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_getjobelements.xml",
+                       fields,
+                       "GET JOB ELEMENTS")
 
-    js = x.find(".//sca:JobStatus", NSMAP)
-    j = parseJobStatus(js)
+    q = x.find(".//sca:JobStatus", NSMAP)
+    jstatus = parse_job_status(q)
 
-    st = x.find(".//sca:ScanTicket", NSMAP)    
-    ticket = parseScanTicket(st)
+    st = x.find(".//sca:ScanTicket", NSMAP)
+    tkt = parse_scan_ticket(st)
 
     ds = x.find(".//sca:Documents", NSMAP)
     dfp = ds.find("sca:DocumentFinalParameters", NSMAP)
-    dp = parseDocumentParams(dfp)
-    dl = [x.text for x in dfp.findall("sca:Document/sca:DocumentDescription/sca:DocumentName", NSMAP)]
+    dps = parse_document_params(dfp)
+    dlist = [x.text for x in dfp.findall("sca:Document/sca:DocumentDescription/sca:DocumentName", NSMAP)]
 
-    return (j, ticket, dp, dl)
+    return jstatus, tkt, dps, dlist
 
-def WSD_GetActiveJobs(hosted_scan_service):
 
+def wsd_get_active_jobs(hosted_scan_service):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_getactivejobs.xml",
-                      fields,
-                      "GET ACTIVE JOBS")
-    
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_getactivejobs.xml",
+                       fields,
+                       "GET ACTIVE JOBS")
+
     jsl = []
     for y in x.findall(".//sca:JobSummary", NSMAP):
         jsum = JobSummary()
         jsum.name = y.find("sca:JobName", NSMAP).text
         jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
-        jsum.status = parseJobStatus(y)
+        jsum.status = parse_job_status(y)
         jsl.append(jsum)
 
     return jsl
 
 
-def WSD_GetJobHistory(hosted_scan_service):
-
+def wsd_get_job_history(hosted_scan_service):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submitRequest(hosted_scan_service.ep_ref_addr,
-                      "ws-scan_getjobhistory.xml",
-                      fields,
-                      "GET JOB HISTORY")
-    
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan_getjobhistory.xml",
+                       fields,
+                       "GET JOB HISTORY")
+
     jsl = []
     for y in x.findall(".//sca:JobSummary", NSMAP):
         jsum = JobSummary()
         jsum.name = y.find("sca:JobName", NSMAP).text
         jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
-        jsum.status = parseJobStatus(y)
+        jsum.status = parse_job_status(y)
         jsl.append(jsum)
 
     return jsl
+
 
 if __name__ == "__main__":
-    (debug, timeout) = parseCmdLine()
-    urn = genUrn()
-    tsl = wsd_discovery.WSD_Probe()
+    (debug, timeout) = parse_cmd_line()
+    urn = gen_urn()
+    tsl = wsd_discovery.get_devices()
     for a in tsl:
-        (ti, hss) = wsd_transfer.WSD_Get(a)
+        (ti, hss) = wsd_transfer.wsd_get(a)
         for b in hss:
             if "wscn:ScannerServiceType" in b.types:
-                sc = WSD_GetScannerElements(b)
+                sc = wsd_get_scanner_elements(b)
                 print(a)
                 print(ti)
                 print(b)
                 print(sc)
                 t = sc.std_ticket
-                t.doc_params.input_src="ADF"
+                t.doc_params.input_src = "ADF"
                 t.doc_params.images_num = 0
-                (valid, ticket) = WSD_ValidateScanTicket(b, t)
+                (valid, ticket) = wsd_validate_scan_ticket(b, t)
                 if valid:
-                    j = WSD_CreateScanJob(b, ticket)
-                    print (j)
-                    (js, t, dp, dl) = WSD_GetJobElements(b, j)
-                    print (js)
-                    print (t)
-                    print (dp)
-                    print (dl)
-                    l = WSD_GetActiveJobs(b)
-                    print (l[0])
-                    l = WSD_GetJobHistory(b)
-                    for i in l:
-                        print (i)
+                    j = wsd_create_scan_job(b, ticket)
+                    print(j)
+                    (js, t, dp, dl) = wsd_get_job_elements(b, j)
+                    print(js)
+                    print(t)
+                    print(dp)
+                    print(dl)
+                    jobs = wsd_get_active_jobs(b)
+                    print(jobs[0])
+                    jobs = wsd_get_job_history(b)
+                    for i in jobs:
+                        print(i)
                     o = 0
-                    while (WSD_RetrieveImage(b, j, "test_%d.jpeg" % o)):
+                    while wsd_retrieve_image(b, j, "test_%d.jpeg" % o):
                         o = o + 1
