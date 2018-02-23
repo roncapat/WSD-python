@@ -9,43 +9,53 @@ from wsd_scan_operations import *
 token_map = {}
 host_map = {}
 
-def wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr):
-    fields_map = {"FROM": urn,
-                  "TO": hosted_scan_service.ep_ref_addr,
-                  "NOTIFY_ADDR": notify_addr,
-                  "EXPIRES": expiration,
-                  "EVENT": event_uri}
-    submit_request(hosted_scan_service.ep_ref_addr, "ws-scan_eventsubscribe.xml", fields_map, "SUBSCRIBE")
-
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
-    wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    if x is False:
+        return False
 
 
 def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, expiration, notify_addr):
@@ -58,12 +68,12 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
     x = submit_request(hosted_scan_service.ep_ref_addr, "ws-scan_scanavailableeventsubscribe.xml", fields_map,
                        "SUBSCRIBE")
 
-    action = x.find(".//wsa:Action", NSMAP).text
-    if action != 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent':
-        return False  # Fault
+    if x is False:
+        return False
 
     dest_token = x.find(".//sca:DestinationToken", NSMAP).text
     return dest_token
+
 
 class RequestHandler(http.server.BaseHTTPRequestHandler):
 
@@ -91,6 +101,18 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             scan_identifier = x.find(".//sca:ScanIdentifier", NSMAP).text
             t = threading.Thread(target=handle_scan_available_event, args=(client_context, scan_identifier))
             t.start()
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent':
+            pass
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent':
+            pass
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent':
+            pass
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent':
+            pass
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':
+            pass
+        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
+            pass
 
 
 def handle_scan_available_event(client_context, scan_identifier):
@@ -122,5 +144,7 @@ if __name__ == "__main__":
             if dest_token is not None:
                 token_map["python_client"] = dest_token
                 host_map["python_client"] = b
+            break
     server = http.server.HTTPServer(('', 6666), RequestHandler)
+    debug = True
     server.serve_forever()
