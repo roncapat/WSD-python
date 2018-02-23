@@ -119,9 +119,11 @@ def wsd_validate_scan_ticket(hosted_scan_service, tkt):
         return False, parse_scan_ticket(x.find(".//sca::ValidScanTicket", NSMAP))
 
 
-def wsd_create_scan_job(hosted_scan_service, tkt):
+def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token=""):
     fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr}
+              "TO": hosted_scan_service.ep_ref_addr,
+              "SCAN_ID": scan_identifier,
+              "DEST_TOKEN": dest_token}
     x = submit_request(hosted_scan_service.ep_ref_addr,
                        "ws-scan_createscanjob.xml",
                        {**fields, **tkt.as_map()},

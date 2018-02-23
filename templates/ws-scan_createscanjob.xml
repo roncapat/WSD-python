@@ -16,6 +16,8 @@
     </soap:Header>
     <soap:Body>
         <wscn:CreateScanJobRequest>
+            <wscn:ScanIdentifier>{{SCAN_ID}}</wscn:ScanIdentifier>
+            <wscn:DestinationToken>{{DEST_TOKEN}}</wscn:DestinationToken>
             <wscn:ScanTicket>
                 <wscn:JobDescription>
                     <wscn:JobName>{{JOB_NAME}}</wscn:JobName>
