@@ -26,11 +26,15 @@ def wsd_probe():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.settimeout(timeout)
     ttl = struct.pack('b', 1)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
+    # Remember to allow incoming UDP packets in system firewall
 
     try:
         if debug:
-            print('##\n## PROBE\n##\n%s' % message)
+            r = etree.fromstring(message, parser=parser)
+            print('##\n## PROBE\n##\n')
+            print(etree.tostring(r, pretty_print=True, xml_declaration=True))
         sock.sendto(message.encode("UTF-8"), multicast_group)
 
         while True:
@@ -44,8 +48,7 @@ def wsd_probe():
                 x = etree.fromstring(data)
                 if debug:
                     print('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
-                if debug:
-                    print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+                    print(etree.tostring(x, pretty_print=True, xml_declaration=True))
                 ts = TargetService()
                 ts.ep_ref_addr = x.find(".//wsa:Address", NSMAP).text  # Optional endpoint fields not implemented yet
                 q = x.find(".//wsd:Types", NSMAP)
@@ -95,7 +98,7 @@ def get_devices(cache=True, discovery=True):
 
         db.close()
 
-        # TODO: validates db entries, some devices may have disappered from the local network
+        # TODO: validates db entries, some devices may have disappeared from the local network
 
     return set.union(c, d)
 

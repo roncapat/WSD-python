@@ -157,7 +157,9 @@ def wsd_retrieve_image(hosted_scan_service, job, docname):
                              DOC_DESCR=docname)
 
     if debug:
-        print('##\n## RETRIEVE IMAGE REQUEST\n##\n%s\n' % data)
+        r = etree.fromstring(data, parser=parser)
+        print('##\n## RETRIEVE IMAGE REQUEST\n##\n')
+        print(etree.tostring(r, pretty_print=True, xml_declaration=True))
 
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 

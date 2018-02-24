@@ -3,10 +3,10 @@
 
 import argparse
 import os
+import requests
 import uuid
 
 import lxml.etree as etree
-import requests
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
          "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
@@ -14,8 +14,10 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 headers = {'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
-timeout = 2
+timeout = 3
 urn = ""
+
+parser = etree.XMLParser(remove_blank_text=True)
 
 
 def gen_urn():
@@ -55,14 +57,16 @@ def submit_request(addr, xml_template, fields_map, op_name):
     data = message_from_file(abs_path("../templates/%s" % xml_template), **fields_map)
 
     if debug:
-        print('##\n## %s REQUEST\n##\n%s\n' % (op_name, data))
+        r = etree.fromstring(data, parser=parser)
+        print('##\n## %s REQUEST\n##\n' % op_name)
+        print(etree.tostring(r, pretty_print=True, xml_declaration=True))
+
     r = requests.post(addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
     if debug:
         print('##\n## %s RESPONSE\n##\n', op_name)
-    if debug:
-        print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+        print(etree.tostring(x, pretty_print=True, xml_declaration=True))
     return x
 
 
