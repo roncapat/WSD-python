@@ -101,6 +101,7 @@ def parse_document_params(dps):
 
 def parse_scanner_condition(scond):
     c = ScannerCondition()
+    c.id = int(scond.get("Id"))
     c.time = scond.find(".//sca:Time", NSMAP).text
     c.name = scond.find(".//sca:Name", NSMAP).text
     c.component = scond.find(".//sca:Component", NSMAP).text
@@ -139,3 +140,87 @@ def parse_job_status(q):
     a = q.find("sca:JobCompletedTime", NSMAP)
     jstatus.completed_time = q.text if a is not None else ""
     return jstatus
+
+
+def parse_scan_configuration(sca_config):
+    config = ScannerConfiguration()
+    ds = sca_config.find(".//sca:DeviceSettings", NSMAP)
+    pla = sca_config.find(".//sca:Platen", NSMAP)
+    adf = sca_config.find(".//sca:ADF", NSMAP)
+    # .//sca:Film omitted
+
+    s = ScannerSettings()
+    q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
+    s.formats = [x.text for x in q]
+    v1 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MaxValue", NSMAP)
+    s.compression_factor = (int(v1.text), int(v2.text))
+    q = ds.findall(".//sca:ContentTypesSupported/sca:ContentTypeValue", NSMAP)
+    s.content_types = [x.text for x in q]
+    q = ds.find(".//sca:DocumentSizeAutoDetectSupported", NSMAP)
+    s.size_autodetect_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:AutoExposureSupported", NSMAP)
+    s.auto_exposure_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:BrightnessSupported", NSMAP)
+    s.brightness_sup = True if q.text == 'true' or q.text == '1' else False
+    q = ds.find(".//sca:ContrastSupported", NSMAP)
+    s.contrast_sup = True if q.text == 'true' or q.text == '1' else False
+    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MaxValue", NSMAP)
+    s.scaling_range_w = (int(v1.text), int(v2.text))
+    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MinValue", NSMAP)
+    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MaxValue", NSMAP)
+    s.scaling_range_h = (int(v1.text), int(v2.text))
+    q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
+    s.rotations = [x.text for x in q]
+    config.settings = s
+    if pla is not None:
+        config.platen = parse_scanner_source_settings(pla, "Platen")
+    if adf is not None:
+        q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
+        config.adf_duplex = True if q.text == 'true' or q.text == '1' else False
+        f = adf.find(".//sca:ADFFront", NSMAP)
+        bk = adf.find(".//sca:ADFBack", NSMAP)
+        if f is not None:
+            config.front_adf = parse_scanner_source_settings(f, "ADF")
+        if bk is not None:
+            config.back_adf = parse_scanner_source_settings(bk, "ADF")
+    return config
+
+
+def parse_scan_status(sca_status):
+    status = ScannerStatus()
+
+    status.time = sca_status.find(".//sca:ScannerCurrentTime", NSMAP).text
+    status.state = sca_status.find(".//sca:ScannerState", NSMAP).text
+    ac = sca_status.find(".//sca:ActiveConditions", NSMAP)
+    if ac is not None:
+        dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
+        for dc in dcl:
+            c = parse_scanner_condition(dc)
+            status.active_conditions[c.id] = c
+    q = sca_status.find(".//sca:ScannerStateReasons", NSMAP)
+    if q is not None:
+        dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
+        for sr in dsr:
+            status.reasons.append(sr.text)
+    q = sca_status.find(".//sca:ConditionHistory", NSMAP)
+    if q is not None:
+        chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
+        for che in chl:
+            c = parse_scanner_condition(che)
+            status.conditions_history[che.find(".//sca:ClearTime", NSMAP).text] = c
+    return status
+
+
+def parse_scan_description(sca_descr):
+    description = ScannerDescription()
+
+    description.name = sca_descr.find(".//sca:ScannerName", NSMAP).text
+    q = sca_descr.find(".//sca:ScannerInfo", NSMAP)
+    if q is not None:
+        description.info = q.text
+    q = sca_descr.find(".//sca:ScannerLocation", NSMAP)
+    if q is not None:
+        description.location = q.text
+    return description

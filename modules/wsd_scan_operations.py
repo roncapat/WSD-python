@@ -26,81 +26,12 @@ def wsd_get_scanner_elements(hosted_scan_service):
     sca_descr = re.find(".//sca:ScannerDescription", NSMAP)
     std_ticket = re.find(".//sca:DefaultScanTicket", NSMAP)
 
-    scs = ScannerService()
+    description = parse_scan_description(sca_descr)
+    status = parse_scan_status(sca_status)
+    config = parse_scan_configuration(sca_config)
+    std_ticket = parse_scan_ticket(std_ticket)
 
-    scs.name = sca_descr.find(".//sca:ScannerName", NSMAP).text
-    q = sca_descr.find(".//sca:ScannerInfo", NSMAP)
-    if q is not None:
-        scs.info = q.text
-    q = sca_descr.find(".//sca:ScannerLocation", NSMAP)
-    if q is not None:
-        scs.location = q.text
-
-    scs.status.time = sca_status.find(".//sca:ScannerCurrentTime", NSMAP).text
-    scs.status.state = sca_status.find(".//sca:ScannerState", NSMAP).text
-    ac = sca_status.find(".//sca:ActiveConditions", NSMAP)
-    if ac is not None:
-        dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
-        for dc in dcl:
-            c = parse_scanner_condition(dc)
-            scs.status.active_conditions.append(c)
-    q = sca_status.find(".//sca:ScannerStateReasons", NSMAP)
-    if q is not None:
-        dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
-        for sr in dsr:
-            scs.status.reasons.append(sr.text)
-    q = sca_status.find(".//sca:ConditionHistory", NSMAP)
-    if q is not None:
-        chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
-        for che in chl:
-            c = parse_scanner_condition(che)
-            scs.status.conditions_history.append((che.find(".//sca:ClearTime", NSMAP).text, c))
-
-    ds = sca_config.find(".//sca:DeviceSettings", NSMAP)
-    pla = sca_config.find(".//sca:Platen", NSMAP)
-    adf = sca_config.find(".//sca:ADF", NSMAP)
-    # .//sca:Film omitted
-
-    s = ScannerSettings()
-    q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
-    s.formats = [x.text for x in q]
-    v1 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MaxValue", NSMAP)
-    s.compression_factor = (int(v1.text), int(v2.text))
-    q = ds.findall(".//sca:ContentTypesSupported/sca:ContentTypeValue", NSMAP)
-    s.content_types = [x.text for x in q]
-    q = ds.find(".//sca:DocumentSizeAutoDetectSupported", NSMAP)
-    s.size_autodetect_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:AutoExposureSupported", NSMAP)
-    s.auto_exposure_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:BrightnessSupported", NSMAP)
-    s.brightness_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:ContrastSupported", NSMAP)
-    s.contrast_sup = True if q.text == 'true' or q.text == '1' else False
-    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MaxValue", NSMAP)
-    s.scaling_range_w = (int(v1.text), int(v2.text))
-    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MaxValue", NSMAP)
-    s.scaling_range_h = (int(v1.text), int(v2.text))
-    q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
-    s.rotations = [x.text for x in q]
-    scs.settings = s
-    if pla is not None:
-        scs.platen = parse_scanner_source_settings(pla, "Platen")
-    if adf is not None:
-        q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
-        scs.adf_duplex = True if q.text == 'true' or q.text == '1' else False
-        f = adf.find(".//sca:ADFFront", NSMAP)
-        bk = adf.find(".//sca:ADFBack", NSMAP)
-        if f is not None:
-            scs.front_adf = parse_scanner_source_settings(f, "ADF")
-        if bk is not None:
-            scs.back_adf = parse_scanner_source_settings(bk, "ADF")
-
-    scs.std_ticket = parse_scan_ticket(std_ticket)
-
-    return scs
+    return description, config, status, std_ticket
 
 
 def wsd_validate_scan_ticket(hosted_scan_service, tkt):
@@ -265,15 +196,17 @@ if __name__ == "__main__":
         (ti, hss) = wsd_transfer.wsd_get(a)
         for b in hss:
             if "wscn:ScannerServiceType" in b.types:
-                sc = wsd_get_scanner_elements(b)
+                (d, c, s, std_ticket) = wsd_get_scanner_elements(b)
                 print(a)
                 print(ti)
                 print(b)
-                print(sc)
-                t = sc.std_ticket
+                print(d)
+                print(c)
+                print(s)
+                print(std_ticket)
                 # t.doc_params.input_src = "ADF"
                 # t.doc_params.images_num = 0
-                (valid, ticket) = wsd_validate_scan_ticket(b, t)
+                (valid, ticket) = wsd_validate_scan_ticket(b, std_ticket)
                 if valid:
                     j = wsd_create_scan_job(b, ticket)
                     print(j)

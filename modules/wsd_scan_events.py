@@ -2,7 +2,9 @@
 # -*- encoding: utf-8 -*-
 
 import http.server
+import queue
 import threading
+import time
 
 from wsd_scan_operations import *
 
@@ -75,10 +77,17 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
     return dest_token
 
 
+class HTTPServerWithContext(http.server.HTTPServer):
+    def __init__(self, server_address, request_handler_class, context, *args, **kw):
+        super().__init__(server_address, request_handler_class)
+        self.context = context
+
+
 class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
-        request_path = self.path
+        context = self.server.context
+        # request_path = self.path
         request_headers = self.headers
         length = int(request_headers["content-length"])
 
@@ -93,26 +102,143 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         x = etree.fromstring(message)
         action = x.find(".//wsa:Action", NSMAP).text
-        if action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent':
+        if action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent' \
+                and context["allow_device_initiated_scans"] is True:
             if debug is True:
                 print('##\n## SCAN AVAILABLE EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode('ascii'))
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
             client_context = x.find(".//sca:ClientContext", NSMAP).text
             scan_identifier = x.find(".//sca:ScanIdentifier", NSMAP).text
             t = threading.Thread(target=handle_scan_available_event, args=(client_context, scan_identifier))
             t.start()
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent':
-            pass
+
+            if debug is True:
+                print('##\n## SCANNER ELEMENTS CHANGE EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+            sca_config = x.find(".//sca:ScannerConfiguration", NSMAP)
+            sca_descr = x.find(".//sca:ScannerDescription", NSMAP)
+            std_ticket = x.find(".//sca:DefaultScanTicket", NSMAP)
+
+            description = parse_scan_description(sca_descr)
+            configuration = parse_scan_configuration(sca_config)
+            std_ticket = parse_scan_ticket(std_ticket)
+
+            context["queues"].sc_descr_q.put(description)
+            context["queues"].sc_conf_q.put(configuration)
+            context["queues"].sc_ticket_q.put(std_ticket)
+
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent':
-            pass
+            if debug is True:
+                print('##\n## SCANNER STATUS SUMMARY EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+            state = x.find(".//sca:ScannerState", NSMAP).text
+            reasons = []
+            q = x.find(".//sca:ScannerStateReasons", NSMAP)
+            if q is not None:
+                dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
+                for sr in dsr:
+                    reasons.append(sr.text)
+            context["queues"].sc_stat_sum_q.put((state, reasons))
+
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent':
-            pass
+            if debug is True:
+                print('##\n## SCANNER STATUS CONDITION EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+            cond = x.find(".//sca:DeviceCondition", NSMAP)
+            cond = parse_scanner_condition(cond)
+            context["queues"].sc_cond_q.put(cond)
+
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent':
-            pass
+            if debug is True:
+                print('##\n## SCANNER STATUS CONDITION CLEARED EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+            cond = x.find(".//sca:DeviceConditionCleared", NSMAP)
+            cond_id = int(cond.find(".//sca:ConditionId", NSMAP).text)
+            clear_time = cond.find(".//sca:ConditionClearTime", NSMAP).text
+            context["queues"].sc_cond_clr_q.put((cond_id, clear_time))
+
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':
-            pass
+            pass  # TODO
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
-            pass
+            pass  # TODO
+
+
+class WSDScannerMonitor:
+    def __init__(self, service, listen_addr, port):
+        (self.description, self.configuration, self.status, self.std_ticket) = wsd_get_scanner_elements(service)
+        self.active_jobs = {}
+        for aj in wsd_get_active_jobs(service):
+            self.active_jobs[aj.status.id] = wsd_get_job_elements(service, aj.status.id)
+        self.job_history = {}
+        for ej in wsd_get_job_history(service):
+            self.job_history[ej.status.id] = ej
+
+        wsd_scanner_elements_change_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        wsd_scanner_status_summary_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        wsd_scanner_status_condition_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        wsd_scanner_status_condition_cleared_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        wsd_job_status_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        wsd_job_end_state_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+
+        class QueuesSet:
+            def __init__(self):
+                self.sc_descr_q = queue.Queue()
+                self.sc_conf_q = queue.Queue()
+                self.sc_ticket_q = queue.Queue()
+                self.sc_stat_sum_q = queue.Queue()
+                self.sc_cond_q = queue.Queue()
+                self.sc_cond_clr_q = queue.Queue()
+                self.job_status_q = queue.Queue()
+                self.job_ended_q = queue.Queue()
+
+        self.queues = QueuesSet()
+
+        context = {"allow_device_initiated_scans": False,
+                   "queues": self.queues}
+
+        server = HTTPServerWithContext(('', port), RequestHandler, context)
+        self.listener = threading.Thread(target=server.serve_forever, args=())
+        self.listener.start()
+
+    def get_scanner_description(self):
+        while self.queues.sc_descr_q.empty() is not True:
+            self.description = self.queues.sc_descr_q.get()
+            self.queues.sc_descr_q.task_done()
+        return self.description
+
+    def get_scanner_configuration(self):
+        while self.queues.sc_conf_q.empty() is not True:
+            self.configuration = self.queues.sc_conf_q.get()
+            self.queues.sc_conf_q.task_done()
+        return self.configuration
+
+    def get_default_ticket(self):
+        while self.queues.sc_ticket_q.empty() is not True:
+            self.std_ticket = self.queues.sc_ticket_q.get()
+            self.queues.sc_ticket_q.task_done()
+        return self.std_ticket
+
+    def get_scanner_status(self):
+        while self.queues.sc_cond_q.empty() is not True:
+            cond = self.queues.sc_cond_q.get()
+            self.status.active_conditions[cond.id] = cond
+            self.queues.sc_cond_q.task_done()
+        while self.queues.sc_cond_clr_q.empty() is not True:
+            (c_id, c_time) = self.queues.sc_cond_clr_q.get()
+            self.status.conditions_history[c_time] = copy.deepcopy(self.status.active_conditions[c_id])
+            del self.status.active_conditions[c_id]
+            self.queues.sc_cond_clr_q.task_done()
+        while self.queues.sc_stat_sum_q.empty() is not True:
+            (self.status.state, self.status.reasons) = self.queues.sc_stat_sum_q.get()
+            self.queues.sc_stat_sum_q.task_done()
+        return self.status
+
+    # TODO: implement boolean query methods like scanner_status_has_changed and so on
 
 
 def handle_scan_available_event(client_context, scan_identifier):
@@ -125,7 +251,7 @@ def handle_scan_available_event(client_context, scan_identifier):
         o = o + 1
 
 
-if __name__ == "__main__":
+def __demo_simple_listener():
     (debug, timeout) = parse_cmd_line()
     urn = gen_urn()
     tsl = wsd_discovery.get_devices()
@@ -145,6 +271,25 @@ if __name__ == "__main__":
                 token_map["python_client"] = dest_token
                 host_map["python_client"] = b
             break
-    server = http.server.HTTPServer(('', 6666), RequestHandler)
+
+    server = HTTPServerWithContext(('', 6666), RequestHandler, "context")
     debug = True
     server.serve_forever()
+
+
+def __demo_monitor():
+    (debug, timeout) = parse_cmd_line()
+    urn = gen_urn()
+    tsl = wsd_discovery.get_devices()
+    (ti, hss) = wsd_transfer.wsd_get(list(tsl)[0])
+    for b in hss:
+        if "wscn:ScannerServiceType" in b.types:
+            listen_addr = "http://192.168.1.109:6666/wsd"
+            m = WSDScannerMonitor(b, listen_addr, 6666)
+            while True:
+                time.sleep(2)
+                print(m.get_scanner_status())
+
+
+if __name__ == "__main__":
+    __demo_monitor()

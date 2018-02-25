@@ -80,6 +80,7 @@ class HostedService:
 
 class ScannerCondition:
     def __init__(self):
+        self.id = 0
         self.time = ""
         self.name = ""
         self.component = ""
@@ -87,6 +88,7 @@ class ScannerCondition:
 
     def __str__(self):
         s = ""
+        s += "Condition ID:         %d\n" % self.id
         s += "Condition name:       %s\n" % self.name
         s += "Condition time:       %s\n" % self.time
         s += "Condition component:  %s\n" % self.component
@@ -99,8 +101,8 @@ class ScannerStatus:
         self.time = ""
         self.state = ""
         self.reasons = []
-        self.active_conditions = []
-        self.conditions_history = []  # tuple (time, condition)
+        self.active_conditions = {}  # dict {id, condition}
+        self.conditions_history = {}  # dict (time, condition)
 
     def __str__(self):
         s = ""
@@ -108,12 +110,12 @@ class ScannerStatus:
         s += "Scanner state:        %s\n" % self.state
         s += "Reasons:              %s\n" % ", ".join(self.reasons)
         s += "Active conditions:\n"
-        for ac in self.active_conditions:
+        for id, ac in self.active_conditions.items():
             s += indent(str(ac))
         s += "Condition history:\n"
-        for c in self.conditions_history:
-            s += indent(str(c[1]))
-            s += indent("Clear time: %s\n" % c[0])
+        for t, c in self.conditions_history.items():
+            s += indent(str(c))
+            s += indent("Clear time: %s\n" % t)
         return s
 
 
@@ -338,25 +340,30 @@ class MediaSide:
         return s
 
 
-class ScannerService:
+class ScannerDescription:
     def __init__(self):
         self.name = ""
         self.info = ""
         self.location = ""
-        self.status = ScannerStatus()
-        self.settings = ScannerSettings()
-        self.platen = None
-        self.adf_duplex = False
-        self.front_adf = None
-        self.back_adf = None
-        self.std_ticket = None
 
     def __str__(self):
         s = ""
         s += "Scanner name:         %s\n" % self.name
         s += "Scanner info:         %s\n" % self.info
         s += "Scanner location:     %s\n" % self.location
-        s += str(self.status)
+        return s
+
+
+class ScannerConfiguration:
+    def __init__(self):
+        self.settings = ScannerSettings()
+        self.platen = None
+        self.adf_duplex = False
+        self.front_adf = None
+        self.back_adf = None
+
+    def __str__(self):
+        s = ""
         s += str(self.settings)
         if self.platen is not None:
             s += "Platen settings:\n"
@@ -368,7 +375,4 @@ class ScannerService:
             if self.adf_duplex:
                 s += "ADF back settings:\n"
                 s += indent(str(self.back_adf))
-        if self.std_ticket is not None:
-            s += "Default ticket:\n"
-            s += indent(str(self.std_ticket))
         return s
