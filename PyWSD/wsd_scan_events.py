@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import http.server
-import queue
 import threading
 import time
+
+import http.server
+import queue
 
 from wsd_scan_operations import *
 

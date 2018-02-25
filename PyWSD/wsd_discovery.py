@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+'''
+
+'''
+
+
 import pickle
 import socket
 import sqlite3
@@ -18,6 +23,11 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 
 def wsd_probe():
+    '''
+    Probes the local network with a multicast packet
+
+    :return: a list of services
+    '''
     message = message_from_file(abs_path("../templates/ws-discovery_probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 
