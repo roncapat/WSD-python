@@ -1,6 +1,6 @@
-
 specs/*
 *.pyc
-
 *.jpeg
 .idea/*
+venv/*
+PyWSD/doc/_build
