@@ -24,9 +24,9 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 def wsd_probe():
     '''
-    Probes the local network with a multicast packet
+    Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
-    :return: a list of services
+    :return: a list of wsd targets
     '''
     message = message_from_file(abs_path("../templates/ws-discovery_probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
@@ -79,6 +79,15 @@ def wsd_probe():
 
 
 def get_devices(cache=True, discovery=True):
+    '''
+    Get a list of available wsd-enabled devices
+
+    :param cache: True if you want to use the database pointed by *WSD_CACHE_PATH* env variable \
+    as a way to know about already discovered devices or not.
+    :param discovery: True if you want to rely on multicast probe for device discovery.
+
+    :return: a list of wsd targets
+    '''
     d = set()
     c = set()
 
