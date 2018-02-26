@@ -15,6 +15,12 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 
 def wsd_get(target_service):
+    '''
+    Query wsd target for information about model/device and hosted services.
+
+    :param target_service: A wsd target
+    :return: A tuple containing a TargetInfo and a list of HostedService instances.
+    '''
     fields = {"FROM": urn,
               "TO": target_service.ep_ref_addr}
     x = submit_request(target_service.xaddrs[0],
@@ -42,6 +48,7 @@ def wsd_get(target_service):
     tinfo.model_url = meta_model.find(".//wsdp:ModelUrl", NSMAP).text
     tinfo.presentation_url = meta_model.find(".//wsdp:PresentationUrl", NSMAP).text
     tinfo.device_cat = meta_model.find(".//pnpx:DeviceCategory", NSMAP).text.split()
+
     tinfo.friendly_name = meta_dev.find(".//wsdp:FriendlyName", NSMAP).text
     tinfo.fw_ver = meta_dev.find(".//wsdp:FirmwareVersion", NSMAP).text
     tinfo.serial_num = meta_dev.find(".//wsdp:SerialNumber", NSMAP).text

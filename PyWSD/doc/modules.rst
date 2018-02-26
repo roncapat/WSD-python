@@ -13,7 +13,6 @@ wsd_structures module
 
 .. automodule:: wsd_structures
     :members:
-    :show-inheritance:
 
 wsd_discovery module
 -----------------------------
