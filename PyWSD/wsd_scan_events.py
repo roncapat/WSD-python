@@ -13,14 +13,14 @@ host_map = {}
 
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to ScannerElementsChange events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-    '''
+    """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -30,14 +30,14 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notif
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to ScannerStatusSummary events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-     '''
+     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -47,14 +47,14 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to ScannerStatusCondition events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-    '''
+    """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -64,14 +64,14 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
 
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to ScannerStatusConditionCleared events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-    '''
+    """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -81,14 +81,14 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expirati
 
 
 def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to JobStatus events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-    '''
+    """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -98,14 +98,14 @@ def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
-    '''
+    """
         Subscribe to JobEndState events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: False if a fault message is received, True otherwise
-    '''
+    """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
@@ -115,17 +115,17 @@ def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
 
 
 def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, expiration, notify_addr):
-    '''
+    """
         Subscribe to ScanAvailable events.
 
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param display_str: the string to display on the device control panel
-        :param contex_str: a string internally used to identify the selection of this wsd host as target of the scan
+        :param context_str: a string internally used to identify the selection of this wsd host as target of the scan
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
         :return: the token needed in CreateScanJob to start a device-initiated scan, \
                 or False if a fault message is received instead
-    '''
+    """
 
     fields_map = {"FROM": urn,
                   "TO": hosted_scan_service.ep_ref_addr,
@@ -143,13 +143,13 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
     return dest_token
 
 
-class __HTTPServerWithContext(http.server.HTTPServer):
+class HTTPServerWithContext(http.server.HTTPServer):
     def __init__(self, server_address, request_handler_class, context, *args, **kw):
-        super().__init__(server_address, request_handler_class)
+        super().__init__(server_address, request_handler_class, *args, **kw)
         self.context = context
 
 
-class __RequestHandler(http.server.BaseHTTPRequestHandler):
+class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         context = self.server.context
@@ -235,11 +235,11 @@ class __RequestHandler(http.server.BaseHTTPRequestHandler):
 
 
 class WSDScannerMonitor:
-    '''
+    """
     A class that abstracts event handling and data querying for a device. Programmer should instantiate this class
     and use its methods to retrieve tickets/configurations/status and more, instead of submitting a wsd request
     directly to the device. This class listens to events and so polling devices is no longer needed.
-    '''
+    """
     def __init__(self, service, listen_addr, port):
         (self.description, self.configuration, self.status, self.std_ticket) = wsd_get_scanner_elements(service)
         self.active_jobs = {}
@@ -272,49 +272,49 @@ class WSDScannerMonitor:
         context = {"allow_device_initiated_scans": False,
                    "queues": self.queues}
 
-        server = __HTTPServerWithContext(('', port), __RequestHandler, context)
+        server = HTTPServerWithContext(('', port), RequestHandler, context)
         self.listener = threading.Thread(target=server.serve_forever, args=())
         self.listener.start()
 
     def get_scanner_description(self):
-        '''
+        """
         Updates and returns the current description of the device.
 
         :return: a valid ScannerDescription instance
-        '''
+        """
         while self.queues.sc_descr_q.empty() is not True:
             self.description = self.queues.sc_descr_q.get()
             self.queues.sc_descr_q.task_done()
         return self.description
 
     def get_scanner_configuration(self):
-        '''
+        """
         Updates and returns the current configuration of the device.
 
         :return: a valid ScannerConfiguration instance
-        '''
+        """
         while self.queues.sc_conf_q.empty() is not True:
             self.configuration = self.queues.sc_conf_q.get()
             self.queues.sc_conf_q.task_done()
         return self.configuration
 
     def get_default_ticket(self):
-        '''
+        """
         Updates and returns the default scan ticket of the device.
 
         :return: a valid ScanTicket instance
-        '''
+        """
         while self.queues.sc_ticket_q.empty() is not True:
             self.std_ticket = self.queues.sc_ticket_q.get()
             self.queues.sc_ticket_q.task_done()
         return self.std_ticket
 
     def get_scanner_status(self):
-        '''
+        """
         Updates and returns the current status and conditions of the device.
 
         :return: a valid ScannerStatus instance
-        '''
+        """
         while self.queues.sc_cond_q.empty() is not True:
             cond = self.queues.sc_cond_q.get()
             self.status.active_conditions[cond.id] = cond
@@ -333,14 +333,14 @@ class WSDScannerMonitor:
 
 
 def handle_scan_available_event(client_context, scan_identifier):
-    '''
+    """
     Reply to a ScanAvailable event by issuing the creation of a new scan job.
     Waits for job completion and writes the output to files.
 
     :param client_context: a string identifying a wsd host selection
     :param scan_identifier: a string identifying the specific scan task to handle
     :return: the number of pages scanned
-    '''
+    """
     host = host_map[client_context]
     dest_token = token_map[client_context]
     ticket = wsd_get_scanner_elements(host).std_ticket
@@ -372,7 +372,7 @@ def __demo_simple_listener():
                 host_map["python_client"] = b
             break
 
-    server = __HTTPServerWithContext(('', 6666), __RequestHandler, "context")
+    server = HTTPServerWithContext(('', 6666), RequestHandler, "context")
     debug = True
     server.serve_forever()
 

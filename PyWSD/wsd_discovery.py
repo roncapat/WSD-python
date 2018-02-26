@@ -1,11 +1,6 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-'''
-
-'''
-
-
 import pickle
 import socket
 import sqlite3
@@ -23,11 +18,11 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 
 def wsd_probe():
-    '''
+    """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
     :return: a list of wsd targets
-    '''
+    """
     message = message_from_file(abs_path("../templates/ws-discovery_probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 
@@ -79,7 +74,7 @@ def wsd_probe():
 
 
 def get_devices(cache=True, discovery=True):
-    '''
+    """
     Get a list of available wsd-enabled devices
 
     :param cache: True if you want to use the database pointed by *WSD_CACHE_PATH* env variable \
@@ -87,7 +82,7 @@ def get_devices(cache=True, discovery=True):
     :param discovery: True if you want to rely on multicast probe for device discovery.
 
     :return: a list of wsd targets
-    '''
+    """
     d = set()
     c = set()
 

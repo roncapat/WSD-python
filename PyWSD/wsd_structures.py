@@ -110,7 +110,7 @@ class ScannerStatus:
         s += "Scanner state:        %s\n" % self.state
         s += "Reasons:              %s\n" % ", ".join(self.reasons)
         s += "Active conditions:\n"
-        for id, ac in self.active_conditions.items():
+        for ac_id, ac in self.active_conditions.items():
             s += indent(str(ac))
         s += "Condition history:\n"
         for t, c in self.conditions_history.items():

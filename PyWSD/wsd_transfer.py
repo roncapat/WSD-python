@@ -15,18 +15,18 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 
 def wsd_get(target_service):
-    '''
+    """
     Query wsd target for information about model/device and hosted services.
 
     :param target_service: A wsd target
     :return: A tuple containing a TargetInfo and a list of HostedService instances.
-    '''
+    """
     fields = {"FROM": urn,
               "TO": target_service.ep_ref_addr}
     x = submit_request(target_service.xaddrs[0],
-                      "ws-transfer_get.xml",
+                       "ws-transfer_get.xml",
                        fields,
-                      "GET")
+                       "GET")
 
     meta = x.find(".//mex:Metadata", NSMAP)
     meta_model = meta.find(
