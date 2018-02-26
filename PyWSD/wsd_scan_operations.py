@@ -7,10 +7,6 @@ import wsd_discovery
 import wsd_transfer
 from wsd_scan_parsers import *
 
-NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
-         "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-         "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
-
 
 def wsd_get_scanner_elements(hosted_scan_service):
     """
@@ -28,11 +24,11 @@ def wsd_get_scanner_elements(hosted_scan_service):
                        fields,
                        "GET SCANNER ELEMENTS")
 
-    re = x.find(".//sca:ScannerElements", NSMAP)
-    sca_status = re.find(".//sca:ScannerStatus", NSMAP)
-    sca_config = re.find(".//sca:ScannerConfiguration", NSMAP)
-    sca_descr = re.find(".//sca:ScannerDescription", NSMAP)
-    std_ticket = re.find(".//sca:DefaultScanTicket", NSMAP)
+    re = xml_find(x, ".//sca:ScannerElements")
+    sca_status = xml_find(re, ".//sca:ScannerStatus")
+    sca_config = xml_find(re, ".//sca:ScannerConfiguration")
+    sca_descr = xml_find(re, ".//sca:ScannerDescription")
+    std_ticket = xml_find(re, ".//sca:DefaultScanTicket")
 
     description = parse_scan_description(sca_descr)
     status = parse_scan_status(sca_status)
@@ -61,12 +57,12 @@ def wsd_validate_scan_ticket(hosted_scan_service, tkt):
                        {**fields, **tkt.as_map()},
                        "VALIDATE SCAN TICKET")
 
-    v = x.find(".//sca:ValidTicket", NSMAP)
+    v = xml_find(x, ".//sca:ValidTicket")
     is_valid = True if v.text == 'true' or v.text == '1' else False
     if is_valid:
         return True, tkt
     else:
-        return False, parse_scan_ticket(x.find(".//sca::ValidScanTicket", NSMAP))
+        return False, parse_scan_ticket(xml_find(x, ".//sca::ValidScanTicket"))
 
 
 def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token=""):
@@ -91,19 +87,19 @@ def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token
                        "CREATE SCAN JOB")
 
     scnj = ScanJob()
-    x = x.find(".//sca:CreateScanJobResponse", NSMAP)
-    scnj.id = int(x.find(".//sca:JobId", NSMAP).text)
-    scnj.token = x.find(".//sca:JobToken", NSMAP).text
-    q = x.find(".//sca:ImageInformation/sca:MediaFrontImageInfo", NSMAP)
-    scnj.f_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
-    scnj.f_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
-    scnj.f_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
-    q = x.find(".//sca:ImageInformation/sca:MediaBackImageInfo", NSMAP)
+    x = xml_find(x, ".//sca:CreateScanJobResponse")
+    scnj.id = int(xml_find(x, ".//sca:JobId").text)
+    scnj.token = xml_find(x, ".//sca:JobToken").text
+    q = xml_find(x, ".//sca:ImageInformation/sca:MediaFrontImageInfo")
+    scnj.f_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
+    scnj.f_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
+    scnj.f_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
+    q = xml_find(x, ".//sca:ImageInformation/sca:MediaBackImageInfo")
     if q is not None:
-        scnj.b_pixel_line = int(q.find("sca:PixelsPerLine", NSMAP).text)
-        scnj.b_num_lines = int(q.find("sca:NumberOfLines", NSMAP).text)
-        scnj.b_byte_line = int(q.find("sca:BytesPerLine", NSMAP).text)
-    dpf = x.find(".//sca:DocumentFinalParameters", NSMAP)
+        scnj.b_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
+        scnj.b_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
+        scnj.b_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
+    dpf = xml_find(x, ".//sca:DocumentFinalParameters")
     scnj.doc_params = parse_document_params(dpf)
 
     return scnj
@@ -130,17 +126,17 @@ def wsd_retrieve_image(hosted_scan_service, job, docname):
                              DOC_DESCR=docname)
 
     if debug:
-        r = etree.fromstring(data, parser=parser)
+        r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## RETRIEVE IMAGE REQUEST\n##\n')
-        print(etree.tostring(r, pretty_print=True, xml_declaration=True))
+        print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
     r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
 
     try:
         x = etree.fromstring(r.text)
-        q = x.find(".//soap:Fault", NSMAP)
+        q = xml_find(x, ".//soap:Fault")
         if q is not None:
-            e = q.find(".//soap:Code/soap:Subcode/soap:Value", NSMAP).text
+            e = xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
             if e == "wscn:ClientErrorNoImagesAvailable":
                 return False
     except:
@@ -173,7 +169,7 @@ def wsd_cancel_job(hosted_scan_service, job):
                        fields,
                        "CANCEL JOB")
 
-    x.find(".//sca:ClientErrorJobIdNotFound", NSMAP)
+    xml_find(x, ".//sca:ClientErrorJobIdNotFound")
     return x is None
 
 
@@ -196,16 +192,16 @@ def wsd_get_job_elements(hosted_scan_service, job):
                        fields,
                        "GET JOB ELEMENTS")
 
-    q = x.find(".//sca:JobStatus", NSMAP)
+    q = xml_find(x, ".//sca:JobStatus")
     jstatus = parse_job_status(q)
 
-    st = x.find(".//sca:ScanTicket", NSMAP)
+    st = xml_find(x, ".//sca:ScanTicket")
     tkt = parse_scan_ticket(st)
 
-    ds = x.find(".//sca:Documents", NSMAP)
-    dfp = ds.find("sca:DocumentFinalParameters", NSMAP)
+    ds = xml_find(x, ".//sca:Documents")
+    dfp = xml_find(ds, "sca:DocumentFinalParameters")
     dps = parse_document_params(dfp)
-    dlist = [x.text for x in dfp.findall("sca:Document/sca:DocumentDescription/sca:DocumentName", NSMAP)]
+    dlist = [x.text for x in xml_findall(dfp, "sca:Document/sca:DocumentDescription/sca:DocumentName")]
 
     return jstatus, tkt, dps, dlist
 
@@ -226,10 +222,10 @@ def wsd_get_active_jobs(hosted_scan_service):
                        "GET ACTIVE JOBS")
 
     jsl = []
-    for y in x.findall(".//sca:JobSummary", NSMAP):
+    for y in xml_findall(x, ".//sca:JobSummary"):
         jsum = JobSummary()
-        jsum.name = y.find("sca:JobName", NSMAP).text
-        jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
+        jsum.name = xml_find(y, "sca:JobName").text
+        jsum.user_name = xml_find(y, "sca:JobOriginatingUserName").text
         jsum.status = parse_job_status(y)
         jsl.append(jsum)
 
@@ -253,10 +249,10 @@ def wsd_get_job_history(hosted_scan_service):
                        "GET JOB HISTORY")
 
     jsl = []
-    for y in x.findall(".//sca:JobSummary", NSMAP):
+    for y in xml_findall(x, ".//sca:JobSummary"):
         jsum = JobSummary()
-        jsum.name = y.find("sca:JobName", NSMAP).text
-        jsum.user_name = y.find("sca:JobOriginatingUserName", NSMAP).text
+        jsum.name = xml_find(y, "sca:JobName").text
+        jsum.user_name = xml_find(y, "sca:JobOriginatingUserName").text
         jsum.status = parse_job_status(y)
         jsl.append(jsum)
 

@@ -6,10 +6,6 @@ import wsd_transfer
 
 from wsd_common import *
 
-NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
-         "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-         "pri": "http://schemas.microsoft.com/windows/2006/08/wdp/print"}
-
 
 def wsd_get_printer_elements(hosted_print_service):
     fields = {"FROM": urn,

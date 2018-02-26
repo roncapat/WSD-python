@@ -139,7 +139,7 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
     if x is False:
         return False
 
-    dest_token = x.find(".//sca:DestinationToken", NSMAP).text
+    dest_token = xml_find(x, ".//sca:DestinationToken").text
     return dest_token
 
 
@@ -167,14 +167,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
         x = etree.fromstring(message)
-        action = x.find(".//wsa:Action", NSMAP).text
+        action = xml_find(x, ".//wsa:Action").text
         if action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent' \
                 and context["allow_device_initiated_scans"] is True:
             if debug is True:
                 print('##\n## SCAN AVAILABLE EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
-            client_context = x.find(".//sca:ClientContext", NSMAP).text
-            scan_identifier = x.find(".//sca:ScanIdentifier", NSMAP).text
+            client_context = xml_find(x, ".//sca:ClientContext").text
+            scan_identifier = xml_find(x, ".//sca:ScanIdentifier").text
             t = threading.Thread(target=handle_scan_available_event, args=(client_context, scan_identifier))
             t.start()
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent':
@@ -183,9 +183,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print('##\n## SCANNER ELEMENTS CHANGE EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
 
-            sca_config = x.find(".//sca:ScannerConfiguration", NSMAP)
-            sca_descr = x.find(".//sca:ScannerDescription", NSMAP)
-            std_ticket = x.find(".//sca:DefaultScanTicket", NSMAP)
+            sca_config = xml_find(x, ".//sca:ScannerConfiguration")
+            sca_descr = xml_find(x, ".//sca:ScannerDescription")
+            std_ticket = xml_find(x, ".//sca:DefaultScanTicket")
 
             description = parse_scan_description(sca_descr)
             configuration = parse_scan_configuration(sca_config)
@@ -200,11 +200,11 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print('##\n## SCANNER STATUS SUMMARY EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
 
-            state = x.find(".//sca:ScannerState", NSMAP).text
+            state = xml_find(x, ".//sca:ScannerState").text
             reasons = []
-            q = x.find(".//sca:ScannerStateReasons", NSMAP)
+            q = xml_find(x, ".//sca:ScannerStateReasons")
             if q is not None:
-                dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
+                dsr = xml_findall(q, ".//sca:ScannerStateReason")
                 for sr in dsr:
                     reasons.append(sr.text)
             context["queues"].sc_stat_sum_q.put((state, reasons))
@@ -214,7 +214,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print('##\n## SCANNER STATUS CONDITION EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
 
-            cond = x.find(".//sca:DeviceCondition", NSMAP)
+            cond = xml_find(x, ".//sca:DeviceCondition")
             cond = parse_scanner_condition(cond)
             context["queues"].sc_cond_q.put(cond)
 
@@ -223,9 +223,9 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print('##\n## SCANNER STATUS CONDITION CLEARED EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
 
-            cond = x.find(".//sca:DeviceConditionCleared", NSMAP)
-            cond_id = int(cond.find(".//sca:ConditionId", NSMAP).text)
-            clear_time = cond.find(".//sca:ConditionClearTime", NSMAP).text
+            cond = xml_find(x, ".//sca:DeviceConditionCleared")
+            cond_id = int(xml_find(cond, ".//sca:ConditionId").text)
+            clear_time = xml_find(cond, ".//sca:ConditionClearTime").text
             context["queues"].sc_cond_clr_q.put((cond_id, clear_time))
 
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':

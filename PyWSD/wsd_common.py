@@ -9,8 +9,15 @@ import lxml.etree as etree
 import requests
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
+         "mex": "http://schemas.xmlsoap.org/ws/2004/09/mex",
          "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-         "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
+         "wsd": "http://schemas.xmlsoap.org/ws/2005/04/discovery",
+         "wsdp": "http://schemas.xmlsoap.org/ws/2006/02/devprof",
+         "i": "http://printer.example.org/2003/imaging",
+         "pri": "http://schemas.microsoft.com/windows/2006/08/wdp/print",
+         "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan",
+         "pnpx": "http://schemas.microsoft.com/windows/pnpx/2005/10",
+         "df": "http://schemas.microsoft.com/windows/2008/09/devicefoundation"}
 
 headers = {'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
@@ -79,16 +86,16 @@ def submit_request(addr, xml_template, fields_map, op_name):
     data = message_from_file(abs_path("../templates/%s" % xml_template), **fields_map)
 
     if debug:
-        r = etree.fromstring(data, parser=parser)
+        r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
-        print(etree.tostring(r, pretty_print=True, xml_declaration=True))
+        print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
     r = requests.post(addr, headers=headers, data=data)
 
     x = etree.fromstring(r.text)
     if debug:
         print('##\n## %s RESPONSE\n##\n', op_name)
-        print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+        print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
     return x
 
 
@@ -123,12 +130,12 @@ def check_fault(xml_soap_tree):
     :param xml_soap_tree: an lxml.Etree instance obtained by parsing a wsd service reply
     :return: True if a fault message is detected, False otherwise
     """
-    action = xml_soap_tree.find(".//wsa:Action", NSMAP).text
+    action = xml_find(xml_soap_tree, ".//wsa:Action").text
     if action == 'http://schemas.xmlsoap.org/ws/2004/08/addressing/fault':
-        code = xml_soap_tree.find(".//soap:Code/soap:Value").text
-        subcode = xml_soap_tree.find(".//soap:Subcode/soap:Value").text
-        reason = xml_soap_tree.find(".//soap:Reason/soap:Text").text
-        detail = xml_soap_tree.find(".//soap:Detail").text
+        code = xml_find(xml_soap_tree, ".//soap:Code/soap:Value").text
+        subcode = xml_find(xml_soap_tree, ".//soap:Subcode/soap:Value").text
+        reason = xml_find(xml_soap_tree, ".//soap:Reason/soap:Text").text
+        detail = xml_find(xml_soap_tree, ".//soap:Detail").text
         if debug:
             print('##\n## FAULT\n##\n')
             print("Code: %s\n" % code)
@@ -138,3 +145,11 @@ def check_fault(xml_soap_tree):
         return True
     else:
         return False
+
+
+def xml_find(xml_tree, query):
+    return xml_tree.find(query, NSMAP)
+
+
+def xml_findall(xml_tree, query):
+    return xml_tree.findall(query, NSMAP)

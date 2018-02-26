@@ -8,14 +8,6 @@ import struct
 
 from wsd_structures import *
 
-NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
-         "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-         "wsd": "http://schemas.xmlsoap.org/ws/2005/04/discovery",
-         "wsdp": "http://schemas.xmlsoap.org/ws/2006/02/devprof",
-         "wprt": "http://schemas.microsoft.com/windows/2006/08/wdp/print",
-         "wscn": "http://schemas.microsoft.com/windows/2006/08/wdp/scan",
-         "i": "http://printer.example.org/2003/imaging"}
-
 
 def wsd_probe():
     """
@@ -35,42 +27,40 @@ def wsd_probe():
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
     # Remember to allow incoming UDP packets in system firewall
 
-    try:
-        if debug:
-            r = etree.fromstring(message, parser=parser)
-            print('##\n## PROBE\n##\n')
-            print(etree.tostring(r, pretty_print=True, xml_declaration=True))
-        sock.sendto(message.encode("UTF-8"), multicast_group)
+    if debug:
+        r = etree.fromstring(message.encode("ASCII"), parser=parser)
+        print('##\n## PROBE\n##\n')
+        print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
+    sock.sendto(message.encode("UTF-8"), multicast_group)
 
-        while True:
-            try:
-                data, server = sock.recvfrom(4096)
-            except socket.timeout:
-                if debug:
-                    print('##\n## TIMEOUT\n##\n')
-                break
-            else:
-                x = etree.fromstring(data)
-                if debug:
-                    print('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
-                    print(etree.tostring(x, pretty_print=True, xml_declaration=True))
-                ts = TargetService()
-                ts.ep_ref_addr = x.find(".//wsa:Address", NSMAP).text  # Optional endpoint fields not implemented yet
-                q = x.find(".//wsd:Types", NSMAP)
-                if q is not None:
-                    ts.types = q.text.split()
-                q = x.find(".//wsd:Scopes", NSMAP)
-                if q is not None:
-                    ts.scopes = q.text.split()
-                q = x.find(".//wsd:XAddrs", NSMAP)
-                if q is not None:
-                    ts.xaddrs = q.text.split()
-                ts.meta_er = int(x.find(".//wsd:MetadataVersion", NSMAP).text)
-                target_services_list.add(ts)
+    while True:
+        try:
+            data, server = sock.recvfrom(4096)
+        except socket.timeout:
+            if debug:
+                print('##\n## TIMEOUT\n##\n')
+            break
+        else:
+            x = etree.fromstring(data)
+            if debug:
+                print('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+            ts = TargetService()
+            ts.ep_ref_addr = xml_find(x, ".//wsa:Address").text  # Optional endpoint fields not implemented yet
+            q = xml_find(x, ".//wsd:Types")
+            if q is not None:
+                ts.types = q.text.split()
+            q = xml_find(x, ".//wsd:Scopes")
+            if q is not None:
+                ts.scopes = q.text.split()
+            q = xml_find(x, ".//wsd:XAddrs")
+            if q is not None:
+                ts.xaddrs = q.text.split()
+            ts.meta_er = int(xml_find(x, ".//wsd:MetadataVersion").text)
+            target_services_list.add(ts)
 
-    finally:
-        sock.close()
-        return target_services_list
+    sock.close()
+    return target_services_list
 
 
 def get_devices(cache=True, discovery=True):

@@ -5,93 +5,89 @@ import copy
 
 from wsd_structures import *
 
-NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
-         "wsa": "http://schemas.xmlsoap.org/ws/2004/08/addressing",
-         "sca": "http://schemas.microsoft.com/windows/2006/08/wdp/scan"}
-
 
 def parse_scan_ticket(std_ticket):
     st = ScanTicket()
-    st.job_name = std_ticket.find(".//sca:JobDescription/sca:JobName", NSMAP).text
-    st.job_user_name = std_ticket.find(".//sca:JobDescription/sca:JobOriginatingUserName", NSMAP).text
-    q = std_ticket.find(".//sca:JobDescription/sca:JobInformation", NSMAP)
+    st.job_name = xml_find(std_ticket, ".//sca:JobDescription/sca:JobName").text
+    st.job_user_name = xml_find(std_ticket, ".//sca:JobDescription/sca:JobOriginatingUserName").text
+    q = xml_find(std_ticket, ".//sca:JobDescription/sca:JobInformation")
     if q is not None:
         st.job_info = q.text
-    dps = std_ticket.find(".//sca:DocumentParameters", NSMAP)
+    dps = xml_find(std_ticket, ".//sca:DocumentParameters")
     st.doc_params = parse_document_params(dps)
     return st
 
 
 def parse_media_side(ms):
     s = MediaSide()
-    r = ms.find(".//sca:ScanRegion", NSMAP)
+    r = xml_find(ms, ".//sca:ScanRegion")
     if r is not None:
-        q = r.find(".//sca:ScanRegionXOffset", NSMAP)
+        q = xml_find(r, ".//sca:ScanRegionXOffset")
         if q is not None:
             s.offset = (int(q.text), s.offset[1])
-        q = r.find(".//sca:ScanRegionYOffset", NSMAP)
+        q = xml_find(r, ".//sca:ScanRegionYOffset")
         if q is not None:
             s.offset = (s.offset[0], int(q.text))
-        v1 = r.find(".//sca:ScanRegionWidth", NSMAP)
-        v2 = r.find(".//sca:ScanRegionHeight", NSMAP)
+        v1 = xml_find(r, ".//sca:ScanRegionWidth")
+        v2 = xml_find(r, ".//sca:ScanRegionHeight")
         s.size = (int(v1.text), int(v2.text))
-    q = ms.find(".//sca:ColorProcessing", NSMAP)
+    q = xml_find(ms, ".//sca:ColorProcessing")
     if q is not None:
         s.color = q.text
-    q = ms.find(".//sca:Resolution/sca:Width", NSMAP)
+    q = xml_find(ms, ".//sca:Resolution/sca:Width")
     s.res = (int(q.text), s.res[1])
-    q = ms.find(".//sca:Resolution/sca:Height", NSMAP)
+    q = xml_find(ms, ".//sca:Resolution/sca:Height")
     s.res = (s.res[0], int(q.text))
     return s
 
 
 def parse_document_params(dps):
     dest = DocumentParams()
-    q = dps.find(".//sca:Format", NSMAP)
+    q = xml_find(dps, ".//sca:Format")
     if q is not None:
         dest.format = q.text
-    q = dps.find(".//sca:CompressionQualityFactor", NSMAP)
+    q = xml_find(dps, ".//sca:CompressionQualityFactor")
     if q is not None:
         dest.compression_factor = q.text
-    q = dps.find(".//sca:ImagesToTransfer", NSMAP)
+    q = xml_find(dps, ".//sca:ImagesToTransfer")
     if q is not None:
         dest.images_num = int(q.text)
-    q = dps.find(".//sca:InputSource", NSMAP)
+    q = xml_find(dps, ".//sca:InputSource")
     if q is not None:
         dest.input_src = q.text
-    q = dps.find(".//sca:ContentType", NSMAP)
+    q = xml_find(dps, ".//sca:ContentType")
     if q is not None:
         dest.content_type = q.text
-    q = dps.find(".//sca:InputSize", NSMAP)
+    q = xml_find(dps, ".//sca:InputSize")
     if q is not None:
-        autod = q.find(".//sca:DocumentAutoDetect", NSMAP)
+        autod = xml_find(q, ".//sca:DocumentAutoDetect")
         if autod is not None:
             dest.size_autodetect = True if autod.text == 'true' or autod.text == '1' else False
-        v1 = q.find(".//sca:InputMediaSize/sca:Width", NSMAP)
-        v2 = q.find(".//sca:InputMediaSize/sca:Height", NSMAP)
+        v1 = xml_find(q, ".//sca:InputMediaSize/sca:Width")
+        v2 = xml_find(q, ".//sca:InputMediaSize/sca:Height")
         dest.input_size = (int(v1.text), int(v2.text))
-    q = dps.find(".//sca:Exposure", NSMAP)
+    q = xml_find(dps, ".//sca:Exposure")
     if q is not None:
-        autod = q.find(".//sca:AutoExposure", NSMAP)
+        autod = xml_find(q, ".//sca:AutoExposure")
         if autod is not None:
             dest.auto_exposure = True if autod.text == 'true' or autod.text == '1' else False
-        dest.contrast = int(q.find(".//sca:ExposureSettings/sca:Contrast", NSMAP).text)
-        dest.brightness = int(q.find(".//sca:ExposureSettings/sca:Brightness", NSMAP).text)
-        dest.sharpness = int(q.find(".//sca:ExposureSettings/sca:Sharpness", NSMAP).text)
-    q = dps.find(".//sca:Scaling", NSMAP)
+        dest.contrast = int(xml_find(q, ".//sca:ExposureSettings/sca:Contrast").text)
+        dest.brightness = int(xml_find(q, ".//sca:ExposureSettings/sca:Brightness").text)
+        dest.sharpness = int(xml_find(q, ".//sca:ExposureSettings/sca:Sharpness").text)
+    q = xml_find(dps, ".//sca:Scaling")
     if q is not None:
-        v1 = q.find(".//sca:ScalingWidth", NSMAP)
-        v2 = q.find(".//sca:ScalingHeight", NSMAP)
+        v1 = xml_find(q, ".//sca:ScalingWidth")
+        v2 = xml_find(q, ".//sca:ScalingHeight")
         dest.scaling = (int(v1.text), int(v2.text))
-    q = dps.find(".//sca:Rotation", NSMAP)
+    q = xml_find(dps, ".//sca:Rotation")
     if q is not None:
         dest.rotation = int(q.text)
-    q = dps.find(".//sca:MediaSides", NSMAP)
+    q = xml_find(dps, ".//sca:MediaSides")
     if q is not None:
-        f = q.find(".//sca:MediaFront", NSMAP)
+        f = xml_find(q, ".//sca:MediaFront")
         dest.front = parse_media_side(f)
 
-        f = q.find(".//sca:MediaBack", NSMAP)
+        f = xml_find(q, ".//sca:MediaBack")
         if f is not None:
             dest.back = parse_media_side(f)
         else:
@@ -102,10 +98,10 @@ def parse_document_params(dps):
 def parse_scanner_condition(scond):
     c = ScannerCondition()
     c.id = int(scond.get("Id"))
-    c.time = scond.find(".//sca:Time", NSMAP).text
-    c.name = scond.find(".//sca:Name", NSMAP).text
-    c.component = scond.find(".//sca:Component", NSMAP).text
-    c.severity = scond.find(".//sca:Severity", NSMAP).text
+    c.time = xml_find(scond, ".//sca:Time").text
+    c.name = xml_find(scond, ".//sca:Name").text
+    c.component = xml_find(scond, ".//sca:Component").text
+    c.severity = xml_find(scond, ".//sca:Severity").text
     return c
 
 
@@ -131,56 +127,56 @@ def parse_scanner_source_settings(se, name):
 
 def parse_job_status(q):
     jstatus = JobStatus()
-    jstatus.id = int(q.find("sca:JobId", NSMAP).text)
-    jstatus.state = q.find("sca:JobState", NSMAP).text
-    jstatus.reasons = [x.text for x in q.findall("sca:JobStateReasons", NSMAP)]
-    jstatus.scans_completed = int(q.find("sca:ScansCompleted", NSMAP).text)
-    a = q.find("sca:JobCreatedTime", NSMAP)
+    jstatus.id = int(xml_find(q, "sca:JobId").text)
+    jstatus.state = xml_find(q, "sca:JobState").text
+    jstatus.reasons = [x.text for x in xml_findall(q, "sca:JobStateReasons")]
+    jstatus.scans_completed = int(xml_find(q, "sca:ScansCompleted").text)
+    a = xml_find(q, "sca:JobCreatedTime")
     jstatus.creation_time = q.text if a is not None else ""
-    a = q.find("sca:JobCompletedTime", NSMAP)
+    a = xml_find(q, "sca:JobCompletedTime")
     jstatus.completed_time = q.text if a is not None else ""
     return jstatus
 
 
 def parse_scan_configuration(sca_config):
     config = ScannerConfiguration()
-    ds = sca_config.find(".//sca:DeviceSettings", NSMAP)
-    pla = sca_config.find(".//sca:Platen", NSMAP)
-    adf = sca_config.find(".//sca:ADF", NSMAP)
+    ds = xml_find(sca_config, ".//sca:DeviceSettings")
+    pla = xml_find(sca_config, ".//sca:Platen")
+    adf = xml_find(sca_config, ".//sca:ADF")
     # .//sca:Film omitted
 
     s = ScannerSettings()
-    q = ds.findall(".//sca:FormatsSupported/sca:FormatValue", NSMAP)
+    q = xml_findall(ds, ".//sca:FormatsSupported/sca:FormatValue")
     s.formats = [x.text for x in q]
-    v1 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:CompressionQualityFactorSupported/sca:MaxValue", NSMAP)
+    v1 = xml_find(ds, ".//sca:CompressionQualityFactorSupported/sca:MinValue")
+    v2 = xml_find(ds, ".//sca:CompressionQualityFactorSupported/sca:MaxValue")
     s.compression_factor = (int(v1.text), int(v2.text))
-    q = ds.findall(".//sca:ContentTypesSupported/sca:ContentTypeValue", NSMAP)
+    q = xml_findall(ds, ".//sca:ContentTypesSupported/sca:ContentTypeValue")
     s.content_types = [x.text for x in q]
-    q = ds.find(".//sca:DocumentSizeAutoDetectSupported", NSMAP)
+    q = xml_find(ds, ".//sca:DocumentSizeAutoDetectSupported")
     s.size_autodetect_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:AutoExposureSupported", NSMAP)
+    q = xml_find(ds, ".//sca:AutoExposureSupported")
     s.auto_exposure_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:BrightnessSupported", NSMAP)
+    q = xml_find(ds, ".//sca:BrightnessSupported")
     s.brightness_sup = True if q.text == 'true' or q.text == '1' else False
-    q = ds.find(".//sca:ContrastSupported", NSMAP)
+    q = xml_find(ds, ".//sca:ContrastSupported")
     s.contrast_sup = True if q.text == 'true' or q.text == '1' else False
-    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MaxValue", NSMAP)
+    v1 = xml_find(ds, ".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MinValue")
+    v2 = xml_find(ds, ".//sca:ScalingRangeSupported/sca:ScalingWidth/sca:MaxValue")
     s.scaling_range_w = (int(v1.text), int(v2.text))
-    v1 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MinValue", NSMAP)
-    v2 = ds.find(".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MaxValue", NSMAP)
+    v1 = xml_find(ds, ".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MinValue")
+    v2 = xml_find(ds, ".//sca:ScalingRangeSupported/sca:ScalingHeight/sca:MaxValue")
     s.scaling_range_h = (int(v1.text), int(v2.text))
-    q = ds.findall(".//sca:RotationsSupported/sca:RotationValue", NSMAP)
+    q = xml_findall(ds, ".//sca:RotationsSupported/sca:RotationValue")
     s.rotations = [x.text for x in q]
     config.settings = s
     if pla is not None:
         config.platen = parse_scanner_source_settings(pla, "Platen")
     if adf is not None:
-        q = adf.find(".//sca:ADFSupportsDuplex", NSMAP)
+        q = xml_find(adf, ".//sca:ADFSupportsDuplex")
         config.adf_duplex = True if q.text == 'true' or q.text == '1' else False
-        f = adf.find(".//sca:ADFFront", NSMAP)
-        bk = adf.find(".//sca:ADFBack", NSMAP)
+        f = xml_find(adf, ".//sca:ADFFront")
+        bk = xml_find(adf, ".//sca:ADFBack")
         if f is not None:
             config.front_adf = parse_scanner_source_settings(f, "ADF")
         if bk is not None:
@@ -191,36 +187,36 @@ def parse_scan_configuration(sca_config):
 def parse_scan_status(sca_status):
     status = ScannerStatus()
 
-    status.time = sca_status.find(".//sca:ScannerCurrentTime", NSMAP).text
-    status.state = sca_status.find(".//sca:ScannerState", NSMAP).text
-    ac = sca_status.find(".//sca:ActiveConditions", NSMAP)
+    status.time = xml_find(sca_status, ".//sca:ScannerCurrentTime").text
+    status.state = xml_find(sca_status, ".//sca:ScannerState").text
+    ac = xml_find(sca_status, ".//sca:ActiveConditions")
     if ac is not None:
-        dcl = ac.findall(".//sca:DeviceCondition", NSMAP)
+        dcl = xml_findall(ac, ".//sca:DeviceCondition")
         for dc in dcl:
             c = parse_scanner_condition(dc)
             status.active_conditions[c.id] = c
-    q = sca_status.find(".//sca:ScannerStateReasons", NSMAP)
+    q = xml_find(sca_status, ".//sca:ScannerStateReasons")
     if q is not None:
-        dsr = q.findall(".//sca:ScannerStateReason", NSMAP)
+        dsr = xml_findall(q, ".//sca:ScannerStateReason")
         for sr in dsr:
             status.reasons.append(sr.text)
-    q = sca_status.find(".//sca:ConditionHistory", NSMAP)
+    q = xml_find(sca_status, ".//sca:ConditionHistory")
     if q is not None:
-        chl = q.findall(".//sca:ConditionHistoryEntry", NSMAP)
+        chl = xml_findall(q, ".//sca:ConditionHistoryEntry")
         for che in chl:
             c = parse_scanner_condition(che)
-            status.conditions_history[che.find(".//sca:ClearTime", NSMAP).text] = c
+            status.conditions_history[xml_find(che, ".//sca:ClearTime").text] = c
     return status
 
 
 def parse_scan_description(sca_descr):
     description = ScannerDescription()
 
-    description.name = sca_descr.find(".//sca:ScannerName", NSMAP).text
-    q = sca_descr.find(".//sca:ScannerInfo", NSMAP)
+    description.name = xml_find(sca_descr, ".//sca:ScannerName").text
+    q = xml_find(sca_descr, ".//sca:ScannerInfo")
     if q is not None:
         description.info = q.text
-    q = sca_descr.find(".//sca:ScannerLocation", NSMAP)
+    q = xml_find(sca_descr, ".//sca:ScannerLocation")
     if q is not None:
         description.location = q.text
     return description
