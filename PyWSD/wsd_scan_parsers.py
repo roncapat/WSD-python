@@ -220,3 +220,29 @@ def parse_scan_description(sca_descr):
     if q is not None:
         description.location = q.text
     return description
+
+
+def parse_job_summary(y):
+    jsum = JobSummary()
+    jsum.name = xml_find(y, "sca:JobName").text
+    jsum.user_name = xml_find(y, "sca:JobOriginatingUserName").text
+    jsum.status = parse_job_status(y)
+    return jsum
+
+
+def parse_scan_job(x):
+    scnj = ScanJob()
+    scnj.id = int(xml_find(x, ".//sca:JobId").text)
+    scnj.token = xml_find(x, ".//sca:JobToken").text
+    q = xml_find(x, ".//sca:ImageInformation/sca:MediaFrontImageInfo")
+    scnj.f_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
+    scnj.f_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
+    scnj.f_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
+    q = xml_find(x, ".//sca:ImageInformation/sca:MediaBackImageInfo")
+    if q is not None:
+        scnj.b_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
+        scnj.b_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
+        scnj.b_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
+    dpf = xml_find(x, ".//sca:DocumentFinalParameters")
+    scnj.doc_params = parse_document_params(dpf)
+    return scnj

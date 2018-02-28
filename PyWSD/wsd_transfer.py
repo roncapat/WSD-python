@@ -15,9 +15,8 @@ def wsd_get(target_service):
     fields = {"FROM": urn,
               "TO": target_service.ep_ref_addr}
     x = submit_request(target_service.xaddrs[0],
-                       "ws-transfer_get.xml",
-                       fields,
-                       "GET")
+                       "ws-transfer__get.xml",
+                       fields)
 
     meta = xml_find(x, ".//mex:Metadata")
     meta_model = xml_find(meta,

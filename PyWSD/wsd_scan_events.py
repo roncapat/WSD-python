@@ -24,9 +24,7 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notif
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
+    return False if x is False else True
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -41,9 +39,7 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
+    return False if x is False else True
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -58,10 +54,7 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
-
+    return False if x is False else True
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
     """
@@ -75,9 +68,7 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expirati
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
+    return False if x is False else True
 
 
 def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -92,9 +83,7 @@ def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
+    return False if x is False else True
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -109,9 +98,7 @@ def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    if x is False:
-        return False
-    return True
+    return False if x is False else True
 
 
 def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, expiration, notify_addr):
@@ -133,8 +120,9 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
                   "EXPIRES": expiration,
                   "DISPLAY_STR": display_str,
                   "CONTEXT": context_str}
-    x = submit_request(hosted_scan_service.ep_ref_addr, "ws-scan_scanavailableeventsubscribe.xml", fields_map,
-                       "SUBSCRIBE")
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan__scan_available_event_subscribe.xml",
+                       fields_map)
 
     if x is False:
         return False
@@ -175,7 +163,8 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
             client_context = xml_find(x, ".//sca:ClientContext").text
             scan_identifier = xml_find(x, ".//sca:ScanIdentifier").text
-            t = threading.Thread(target=handle_scan_available_event, args=(client_context, scan_identifier))
+            t = threading.Thread(target=handle_scan_available_event,
+                                 args=(client_context, scan_identifier, "wsd-daemon-scan"))
             t.start()
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent':
 
@@ -228,12 +217,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             clear_time = xml_find(cond, ".//sca:ConditionClearTime").text
             context["queues"].sc_cond_clr_q.put((cond_id, clear_time))
 
+        # TODO: implement job monitoring
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':
-            pass  # TODO
+            pass
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
-            pass  # TODO
+            pass
 
 
+# TODO: implement multi-device simultaneous monitoring
 class WSDScannerMonitor:
     """
     A class that abstracts event handling and data querying for a device. Programmer should instantiate this class
@@ -329,16 +320,51 @@ class WSDScannerMonitor:
             self.queues.sc_stat_sum_q.task_done()
         return self.status
 
-    # TODO: implement boolean query methods like scanner_status_has_changed and so on
+    def scanner_description_has_changed(self):
+        """
+        Check if the scanner status has been updated since last get_scanner_status() call
+
+        :return: True if the scanner status has changed, False otherwise
+        """
+        return not self.queues.sc_cond_q.empty()
+
+    def scanner_configuration_has_changed(self):
+        """
+        Check if the scanner status has been updated since last get_scanner_status() call
+
+        :return: True if the scanner status has changed, False otherwise
+        """
+        return not self.queues.sc_conf_q.empty()
+
+    def default_scan_ticket_has_changed(self):
+        """
+        Check if the scanner status has been updated since last get_scanner_status() call
+
+        :return: True if the scanner status has changed, False otherwise
+        """
+        return not self.queues.sc_ticket_q.empty()
+
+    def scanner_status_has_changed(self):
+        """
+        Check if the scanner status has been updated since last get_scanner_status() call
+
+        :return: True if the scanner status has changed, False otherwise
+        """
+        return not (self.queues.sc_cond_q.empty()
+                    and self.queues.sc_cond_clr_q.empty()
+                    and self.queues.sc_stat_sum_q.empty())
 
 
-def handle_scan_available_event(client_context, scan_identifier):
+def handle_scan_available_event(client_context, scan_identifier, file_name):
     """
     Reply to a ScanAvailable event by issuing the creation of a new scan job.
     Waits for job completion and writes the output to files.
 
     :param client_context: a string identifying a wsd host selection
     :param scan_identifier: a string identifying the specific scan task to handle
+    :param file_name: the prefix name of the files to write.\
+     Full name will be of the form "file_name_N.ext" where N is a progressive number,\
+      and ext the extension of the file (by now, only .jpeg is supported)
     :return: the number of pages scanned
     """
     host = host_map[client_context]
@@ -346,7 +372,7 @@ def handle_scan_available_event(client_context, scan_identifier):
     ticket = wsd_get_scanner_elements(host).std_ticket
     job = wsd_create_scan_job(host, ticket, scan_identifier, dest_token)
     o = 0
-    while wsd_retrieve_image(host, job, "test_%d.jpeg" % o):
+    while wsd_retrieve_image(host, job, "%s_%d.jpeg" % (file_name, o)):
         o = o + 1
     return o
 

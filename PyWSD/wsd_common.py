@@ -21,7 +21,6 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 
 headers = {'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
-timeout = 3
 urn = ""
 
 parser = etree.XMLParser(remove_blank_text=True)
@@ -73,16 +72,18 @@ def abs_path(relpath):
     return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))
 
 
-def submit_request(addr, xml_template, fields_map, op_name):
+def submit_request(addr, xml_template, fields_map):
     """
     Send a wsd xml/soap request to the specified address, and wait for response.
 
     :param addr: the address of the wsd service
-    :param xml_template: the *name* of the template file to use as payload
+    :param xml_template: the *name* of the template file to use as payload.\
+    Should be of the form "prefix__some_words_for_description.xml"
     :param fields_map: the dictionary containing the values needed to fill the loaded XML template
-    :param op_name: the name of the action, used in debug level output
     :return:
     """
+    op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
+
     data = message_from_file(abs_path("../templates/%s" % xml_template), **fields_map)
 
     if debug:
@@ -115,7 +116,9 @@ def wsd_subscribe(hosted_service, event_uri, expiration, notify_addr):
                   "NOTIFY_ADDR": notify_addr,
                   "EXPIRES": expiration,
                   "EVENT": event_uri}
-    x = submit_request(hosted_service.ep_ref_addr, "ws-scan_eventsubscribe.xml", fields_map, "SUBSCRIBE")
+    x = submit_request(hosted_service.ep_ref_addr,
+                       "ws-scan__event_subscribe.xml",
+                       fields_map)
 
     if check_fault(x):
         return False
@@ -148,8 +151,25 @@ def check_fault(xml_soap_tree):
 
 
 def xml_find(xml_tree, query):
+    """
+    Wrapper for etree.find() method. When parsing wsd xml/soap messages, you should use this wrapper,
+    because it encapsulates all the xml namespaces needed and avoids coding errors.
+
+    :param xml_tree: the etree element to search in
+    :param query: the XPath query
+    :return: the searched etree if found, or None otherwise
+    """
     return xml_tree.find(query, NSMAP)
 
 
 def xml_findall(xml_tree, query):
+    """
+    Wrapper for etree.findall() method. When parsing wsd xml/soap messages, you should use this wrapper,
+    because it encapsulates all the xml namespaces needed and avoids coding errors.
+
+    :param xml_tree: the etree element to search in
+    :param query: the XPath query
+    :return: a list of searched etrees if found, or None otherwise
+    """
+
     return xml_tree.findall(query, NSMAP)

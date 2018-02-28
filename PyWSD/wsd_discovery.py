@@ -9,13 +9,13 @@ import struct
 from wsd_structures import *
 
 
-def wsd_probe():
+def wsd_probe(timeout=3):
     """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
     :return: a list of wsd targets
     """
-    message = message_from_file(abs_path("../templates/ws-discovery_probe.xml"), FROM=urn)
+    message = message_from_file(abs_path("../templates/ws-discovery__probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 
     target_services_list = set()
@@ -63,7 +63,7 @@ def wsd_probe():
     return target_services_list
 
 
-def get_devices(cache=True, discovery=True):
+def get_devices(cache=True, discovery=True, timeout=3):
     """
     Get a list of available wsd-enabled devices
 
@@ -71,13 +71,13 @@ def get_devices(cache=True, discovery=True):
     as a way to know about already discovered devices or not.
     :param discovery: True if you want to rely on multicast probe for device discovery.
 
-    :return: a list of wsd targets
+    :return: a list of wsd targets as TargetService instances
     """
     d = set()
     c = set()
 
     if discovery is True:
-        d = wsd_probe()
+        d = wsd_probe(timeout)
 
     if cache is True:
         # Open the DB, if exists, or create a new one
@@ -111,6 +111,6 @@ if __name__ == "__main__":
     (debug, timeout) = parse_cmd_line()
     urn = gen_urn()
     debug = True
-    tsl = get_devices()
+    tsl = get_devices(timeout=timeout)
     for a in tsl:
         print(a)

@@ -11,9 +11,8 @@ def wsd_get_printer_elements(hosted_print_service):
     fields = {"FROM": urn,
               "TO": hosted_print_service.ep_ref_addr}
     submit_request(hosted_print_service.ep_ref_addr,
-                   "ws-print_getprinterelements.xml",
-                   fields,
-                   "GET PRINTER ELEMENTS")
+                   "ws-print__get_printer_elements.xml",
+                   fields)
 
 
 if __name__ == "__main__":

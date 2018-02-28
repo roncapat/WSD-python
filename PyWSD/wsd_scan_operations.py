@@ -20,9 +20,8 @@ def wsd_get_scanner_elements(hosted_scan_service):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_getscannerelements.xml",
-                       fields,
-                       "GET SCANNER ELEMENTS")
+                       "ws-scan__get_scanner_elements.xml",
+                       fields)
 
     re = xml_find(x, ".//sca:ScannerElements")
     sca_status = xml_find(re, ".//sca:ScannerStatus")
@@ -53,13 +52,12 @@ def wsd_validate_scan_ticket(hosted_scan_service, tkt):
     fields = {"FROM": urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_validatescanticket.xml",
-                       {**fields, **tkt.as_map()},
-                       "VALIDATE SCAN TICKET")
+                       "ws-scan__validate_scan_ticket.xml",
+                       {**fields, **tkt.as_map()})
 
     v = xml_find(x, ".//sca:ValidTicket")
-    is_valid = True if v.text == 'true' or v.text == '1' else False
-    if is_valid:
+
+    if v.text == 'true' or v.text == '1':
         return True, tkt
     else:
         return False, parse_scan_ticket(xml_find(x, ".//sca::ValidScanTicket"))
@@ -82,30 +80,109 @@ def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token
               "SCAN_ID": scan_identifier,
               "DEST_TOKEN": dest_token}
     x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_createscanjob.xml",
-                       {**fields, **tkt.as_map()},
-                       "CREATE SCAN JOB")
+                       "ws-scan__create_scan_job.xml",
+                       {**fields, **tkt.as_map()})
 
-    scnj = ScanJob()
     x = xml_find(x, ".//sca:CreateScanJobResponse")
-    scnj.id = int(xml_find(x, ".//sca:JobId").text)
-    scnj.token = xml_find(x, ".//sca:JobToken").text
-    q = xml_find(x, ".//sca:ImageInformation/sca:MediaFrontImageInfo")
-    scnj.f_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
-    scnj.f_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
-    scnj.f_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
-    q = xml_find(x, ".//sca:ImageInformation/sca:MediaBackImageInfo")
-    if q is not None:
-        scnj.b_pixel_line = int(xml_find(q, "sca:PixelsPerLine").text)
-        scnj.b_num_lines = int(xml_find(q, "sca:NumberOfLines").text)
-        scnj.b_byte_line = int(xml_find(q, "sca:BytesPerLine").text)
-    dpf = xml_find(x, ".//sca:DocumentFinalParameters")
-    scnj.doc_params = parse_document_params(dpf)
 
-    return scnj
+    return parse_scan_job(x)
 
 
-def wsd_retrieve_image(hosted_scan_service, job, docname):
+def wsd_cancel_job(hosted_scan_service, job):
+    """
+    Submit a CancelJob request, and parse the response.
+    Stops and aborts the specified scan job.
+
+    :param hosted_scan_service: the wsd scan service to query
+    :param job: the ScanJob instance representing the job to abort
+    :return: True if the job is found and then aborted, False if the specified job do not exists or already ended.
+    """
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr,
+              "JOB_ID": job.id}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan__cancel_job.xml",
+                       fields)
+
+    xml_find(x, ".//sca:ClientErrorJobIdNotFound")
+    return x is None
+
+
+def wsd_get_job_elements(hosted_scan_service, job):
+    """
+    Submit a GetJob request, and parse the response.
+    The device should reply with info's about the specified job, such as its status,
+    the ticket submitted for job initiation, the final parameters set effectively used to scan, and a document list.
+
+    :param hosted_scan_service: the wsd scan service to query
+    :param job: the ScanJob instance representing the job to abort
+    :return: a tuple of the form (JobStatus, ScanTicket, DocumentParams, doclist),\
+    where doclist is a list of document names
+    """
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr,
+              "JOB_ID": job.id}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan__get_job_elements.xml",
+                       fields)
+
+    q = xml_find(x, ".//sca:JobStatus")
+    jstatus = parse_job_status(q)
+
+    st = xml_find(x, ".//sca:ScanTicket")
+    tkt = parse_scan_ticket(st)
+
+    dfp = xml_find(x, ".//sca:Documents/sca:DocumentFinalParameters")
+    dps = parse_document_params(dfp)
+    dlist = [x.text for x in xml_findall(dfp, "sca:Document/sca:DocumentDescription/sca:DocumentName")]
+
+    return jstatus, tkt, dps, dlist
+
+
+def wsd_get_active_jobs(hosted_scan_service):
+    """
+    Submit a GetActiveJobs request, and parse the response.
+    The device should reply with a list of all active scan jobs.
+
+    :param hosted_scan_service: the wsd scan service to query
+    :return: a list of JobStatus elements
+    """
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan__get_active_jobs.xml",
+                       fields)
+
+    jsl = []
+    for y in xml_findall(x, ".//sca:JobSummary"):
+        jsl.append(parse_job_summary(y))
+
+    return jsl
+
+
+def wsd_get_job_history(hosted_scan_service):
+    """
+    Submit a GetJobHistory request, and parse the response.
+    The device should reply with a list of recently ended jobs.
+    Note that some device implementations do not keep or share job history through WSD.
+
+    :param hosted_scan_service: the wsd scan service to query
+    :return: a list of JobStatus elements.
+    """
+    fields = {"FROM": urn,
+              "TO": hosted_scan_service.ep_ref_addr}
+    x = submit_request(hosted_scan_service.ep_ref_addr,
+                       "ws-scan__get_job_history.xml",
+                       fields)
+
+    jsl = []
+    for y in xml_findall(x, ".//sca:JobSummary"):
+        jsl.append(parse_job_summary(y))
+
+    return jsl
+
+
+def wsd_retrieve_image(hosted_scan_service, job, docname, relpath):
     """
     Submit a RetrieveImage request, and parse the response.
     Retrieves a single image from the scanner, if the job has available images to send.
@@ -115,10 +192,11 @@ def wsd_retrieve_image(hosted_scan_service, job, docname):
     :param hosted_scan_service: the wsd scan service to query
     :param job: the ScanJob instance representing the queried job.
     :param docname: the name assigned to the image to retrieve.
+    :param relpath: the relative path of the file to write the image to.
     :return: True if image is available, False otherwise
     """
 
-    data = message_from_file(abs_path("../templates/ws-scan_retrieveimage.xml"),
+    data = message_from_file(abs_path("../templates/ws-scan__retrieve_image.xml"),
                              FROM=urn,
                              TO=hosted_scan_service.ep_ref_addr,
                              JOB_ID=job.id,
@@ -147,116 +225,9 @@ def wsd_retrieve_image(hosted_scan_service, job, docname):
 
         if debug:
             print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
-        open(docname, "wb").write(ls[2].get_payload(decode=True))
+        open(relpath, "wb").write(ls[2].get_payload(decode=True))
 
         return True
-
-
-def wsd_cancel_job(hosted_scan_service, job):
-    """
-    Submit a CancelJob request, and parse the response.
-    Stops and aborts the specified scan job.
-
-    :param hosted_scan_service: the wsd scan service to query
-    :param job: the ScanJob instance representing the job to abort
-    :return: True if the job is found and then aborted, False if the specified job do not exists or already ended.
-    """
-    fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr,
-              "JOB_ID": job.id}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_canceljob.xml",
-                       fields,
-                       "CANCEL JOB")
-
-    xml_find(x, ".//sca:ClientErrorJobIdNotFound")
-    return x is None
-
-
-def wsd_get_job_elements(hosted_scan_service, job):
-    """
-    Submit a GetJob request, and parse the response.
-    The device should reply with info's about the specified job, such as its status,
-    the ticket submitted for job initiation, the final parameters set effectively used to scan, and a document list.
-
-    :param hosted_scan_service: the wsd scan service to query
-    :param job: the ScanJob instance representing the job to abort
-    :return: a tuple of the form (JobStatus, ScanTicket, DocumentParams, doclist),\
-    where doclist is a list of document names
-    """
-    fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr,
-              "JOB_ID": job.id}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_getjobelements.xml",
-                       fields,
-                       "GET JOB ELEMENTS")
-
-    q = xml_find(x, ".//sca:JobStatus")
-    jstatus = parse_job_status(q)
-
-    st = xml_find(x, ".//sca:ScanTicket")
-    tkt = parse_scan_ticket(st)
-
-    ds = xml_find(x, ".//sca:Documents")
-    dfp = xml_find(ds, "sca:DocumentFinalParameters")
-    dps = parse_document_params(dfp)
-    dlist = [x.text for x in xml_findall(dfp, "sca:Document/sca:DocumentDescription/sca:DocumentName")]
-
-    return jstatus, tkt, dps, dlist
-
-
-def wsd_get_active_jobs(hosted_scan_service):
-    """
-    Submit a GetActiveJobs request, and parse the response.
-    The device should reply with a list of all active scan jobs.
-
-    :param hosted_scan_service: the wsd scan service to query
-    :return: a list of JobStatus elements
-    """
-    fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_getactivejobs.xml",
-                       fields,
-                       "GET ACTIVE JOBS")
-
-    jsl = []
-    for y in xml_findall(x, ".//sca:JobSummary"):
-        jsum = JobSummary()
-        jsum.name = xml_find(y, "sca:JobName").text
-        jsum.user_name = xml_find(y, "sca:JobOriginatingUserName").text
-        jsum.status = parse_job_status(y)
-        jsl.append(jsum)
-
-    return jsl
-
-
-def wsd_get_job_history(hosted_scan_service):
-    """
-    Submit a GetJobHistory request, and parse the response.
-    The device should reply with a list of recently ended jobs.
-    Note that some device implementations do not keep or share job history through WSD.
-
-    :param hosted_scan_service: the wsd scan service to query
-    :return: a list of JobStatus elements.
-    """
-    fields = {"FROM": urn,
-              "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan_getjobhistory.xml",
-                       fields,
-                       "GET JOB HISTORY")
-
-    jsl = []
-    for y in xml_findall(x, ".//sca:JobSummary"):
-        jsum = JobSummary()
-        jsum.name = xml_find(y, "sca:JobName").text
-        jsum.user_name = xml_find(y, "sca:JobOriginatingUserName").text
-        jsum.status = parse_job_status(y)
-        jsl.append(jsum)
-
-    return jsl
 
 
 def __demo():
