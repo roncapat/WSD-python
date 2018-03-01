@@ -6,7 +6,7 @@ import socket
 import sqlite3
 import struct
 
-from wsd_structures import *
+from wsd_transfer import *
 
 
 def wsd_probe(timeout=3):
@@ -85,8 +85,10 @@ def get_devices(cache=True, discovery=True, timeout=3):
         if p == "":
             p = os.path.expanduser("~/.wsdcache.db")
             os.environ["WSD_CACHE_PATH"] = p
+
         db = sqlite3.connect(p)
         cursor = db.cursor()
+
         cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (SerializedTarget TEXT);")
         db.commit()
 
@@ -95,14 +97,19 @@ def get_devices(cache=True, discovery=True, timeout=3):
         for row in cursor:
             c.add(pickle.loads(row[0].encode()))
 
+        # Discard not-reachable targets
+        for t in c:
+            if wsd_get(t) is False:
+                c.remove(t)
+                cursor.execute('DELETE FROM WsdCache WHERE SerializedTarget=?', (pickle.dumps(t, 0).decode(),))
+        db.commit()
+
         # Add discovered entries to DB
         for i in d:
             cursor.execute('INSERT INTO WsdCache(SerializedTarget) VALUES (?)', (pickle.dumps(i, 0).decode(),))
         db.commit()
 
         db.close()
-
-        # TODO: validates db entries, some devices may have disappeared from the local network
 
     return set.union(c, d)
 

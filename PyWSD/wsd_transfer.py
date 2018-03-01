@@ -63,7 +63,7 @@ def wsd_get(target_service):
             q = xml_find(h, ".//wsdp:ServiceAddress")
             if q:
                 hs.service_address = q.text
-            er = xml_find(er, ".//wsa:EndpointReference")
+            er = xml_find(h, ".//wsa:EndpointReference")
             hs.ep_ref_addr = xml_find(er, ".//wsa:Address").text
             hservices.append(hs)
 

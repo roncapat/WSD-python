@@ -91,7 +91,10 @@ def submit_request(addr, xml_template, fields_map):
         print('##\n## %s REQUEST\n##\n' % op_name)
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-    r = requests.post(addr, headers=headers, data=data)
+    try:
+        r = requests.post(addr, headers=headers, data=data, timeout=1)
+    except TimeoutError:
+        return False
 
     x = etree.fromstring(r.text)
     if debug:
