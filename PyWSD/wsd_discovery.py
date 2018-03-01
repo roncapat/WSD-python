@@ -15,6 +15,7 @@ def wsd_probe(timeout=3):
 
     :return: a list of wsd targets
     """
+    # TODO: allow device types filtering
     message = message_from_file(abs_path("../templates/ws-discovery__probe.xml"), FROM=urn)
     multicast_group = ('239.255.255.250', 3702)
 

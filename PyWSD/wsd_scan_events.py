@@ -6,10 +6,34 @@ import queue
 import threading
 import time
 
+from wsd_eventing import *
 from wsd_scan_operations import *
 
 token_map = {}
 host_map = {}
+
+
+# TODO: default no expiration
+
+
+def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_addr):
+    """
+        Subscribe to ScannerElementsChange events.
+
+        :param hosted_scan_service: the wsd service to receive event notifications from
+        :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
+        :param notify_addr: The address to send notifications to.
+        :return: False if a fault message is received, True otherwise
+    """
+    event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
+    event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
+    event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
+    event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
+    event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
+    event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
+    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+
+    return False if x is False else True
 
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -55,6 +79,7 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
     return False if x is False else True
+
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
     """
@@ -233,6 +258,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
 
 # TODO: implement multi-device simultaneous monitoring
+# TODO: implement subscription renewal
 class WSDScannerMonitor:
     """
     A class that abstracts event handling and data querying for a device. Programmer should instantiate this class
@@ -395,12 +421,13 @@ def __demo_simple_listener():
     for b in hss:
         if "wscn:ScannerServiceType" in b.types:
             listen_addr = "http://192.168.1.109:6666/wsd"
-            wsd_scanner_elements_change_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            wsd_scanner_status_summary_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            wsd_scanner_status_condition_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            wsd_scanner_status_condition_cleared_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            wsd_job_status_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            wsd_job_end_state_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            wsd_scanner_all_events_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_elements_change_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_status_summary_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_status_condition_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_status_condition_cleared_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_job_status_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_job_end_state_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             dest_token = wsd_scan_available_event_subscribe(b, "PROVA_PYTHON", "python_client", "P0Y0M0DT30H0M0S",
                                                             listen_addr)
             if dest_token is not None:
@@ -429,3 +456,4 @@ def __demo_monitor():
 
 if __name__ == "__main__":
     __demo_monitor()
+    #__demo_simple_listener()
