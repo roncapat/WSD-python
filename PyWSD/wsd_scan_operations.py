@@ -2,6 +2,9 @@
 # -*- encoding: utf-8 -*-
 
 import email
+from io import BytesIO
+
+from PIL import Image
 
 import wsd_discovery
 import wsd_transfer
@@ -182,7 +185,7 @@ def wsd_get_job_history(hosted_scan_service):
     return jsl
 
 
-def wsd_retrieve_image(hosted_scan_service, job, docname, relpath):
+def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
     """
     Submit a RetrieveImage request, and parse the response.
     Retrieves a single image from the scanner, if the job has available images to send.
@@ -225,7 +228,12 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath):
 
         if debug:
             print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
-        open(relpath, "wb").write(ls[2].get_payload(decode=True))
+
+        img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
+        print(img.format + " | " + img.size + " | " + img.mode)
+
+        pathname = relpath + '/' + docname
+        img.save(pathname, "BMP")
 
         return True
 
