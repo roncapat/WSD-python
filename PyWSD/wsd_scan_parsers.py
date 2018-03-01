@@ -6,6 +6,8 @@ import copy
 from wsd_structures import *
 
 
+# TODO: use declxml https://github.com/gatkin/declxml
+
 def parse_scan_ticket(std_ticket):
     st = ScanTicket()
     st.job_name = xml_find(std_ticket, ".//sca:JobDescription/sca:JobName").text

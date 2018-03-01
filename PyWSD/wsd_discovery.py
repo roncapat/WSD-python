@@ -58,6 +58,7 @@ def wsd_probe(timeout=3):
                 ts.xaddrs = q.text.split()
             ts.meta_er = int(xml_find(x, ".//wsd:MetadataVersion").text)
             target_services_list.add(ts)
+            # TODO: rely on wsd_resolve for xaddrs field presence
 
     sock.close()
     return target_services_list

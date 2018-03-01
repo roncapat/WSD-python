@@ -232,9 +232,13 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
         print(img.format + " | " + img.size + " | " + img.mode)
 
+        # TODO: support multi-page response
+
         pathname = relpath + '/' + docname
         img.save(pathname, "BMP")
 
+        # TODO: do not wait for exception, use ticket imagestotransfer value instead for loop ending
+        # return bitmaps maybe
         return True
 
 
