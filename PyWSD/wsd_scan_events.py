@@ -217,11 +217,19 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
             clear_time = xml_find(cond, ".//sca:ConditionClearTime").text
             context["queues"].sc_cond_clr_q.put((cond_id, clear_time))
 
-        # TODO: implement job monitoring
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':
-            pass
+            if debug is True:
+                print('##\n## JOB STATUS EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+                s = xml_find(x, ".//sca:JobStatus")
+            context["queues"].sc_job_status_q.put(parse_job_status(s))
+
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
-            pass
+            if debug is True:
+                print('##\n## JOB END STATE EVENT\n##\n')
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+                s = xml_find(x, ".//sca:JobEndState")
+            context["queues"].sc_job_ended_q.put(parse_job_summary(s))
 
 
 # TODO: implement multi-device simultaneous monitoring
@@ -353,6 +361,8 @@ class WSDScannerMonitor:
         return not (self.queues.sc_cond_q.empty()
                     and self.queues.sc_cond_clr_q.empty()
                     and self.queues.sc_stat_sum_q.empty())
+
+    # TODO: implement collection of jobs status
 
 
 def handle_scan_available_event(client_context, scan_identifier, file_name):
