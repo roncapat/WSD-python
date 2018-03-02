@@ -8,21 +8,16 @@
             <wsa:Address>{{FROM}}</wsa:Address>
         </wsa:From>
         <wsa:To>{{TO}}</wsa:To>
-        <wsa:Action>http://schemas.xmlsoap.org/ws/2004/08/eventing/Subscribe</wsa:Action>
-        <wsa:MessageID>urn:uuid:52b04a16-55d6-4b8f-a23c-55759d11cea5</wsa:MessageID>
+        <wsa:Action>http://schemas.xmlsoap.org/ws/2004/08/eventing/GetStatus</wsa:Action>
+        <wsa:MessageID>urn:uuid:52b04a16-55d6-4b8f-a23c-55759d11cea8</wsa:MessageID>
         <wsa:ReplyTo>
             <wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
         </wsa:ReplyTo>
+        <wse:Identifier>
+            {{SUBSCRIPTION_ID}}
+        </wse:Identifier>
     </soap:Header>
     <soap:Body>
-        <wse:Subscribe>
-            <wse:Delivery>
-                <wse:NotifyTo>
-                    <wsa:Address>{{NOTIFY_ADDR}}</wsa:Address>
-                </wse:NotifyTo>
-            </wse:Delivery>
-            <wse:Expires>{{EXPIRES}}</wse:Expires>
-            <wse:Filter Dialect="http://schemas.xmlsoap.org/ws/2006/02/devprof/Action">{{EVENT}}</wse:Filter>
-        </wse:Subscribe>
+        <wse:GetStatus/>
     </soap:Body>
 </soap:Envelope>

@@ -230,7 +230,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
             print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
 
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
-        print(img.format + " | " + img.size + " | " + img.mode)
+        print("%s %s %s" % (img.format, img.size, img.mode))
 
         # TODO: support multi-page response
 

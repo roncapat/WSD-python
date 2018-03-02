@@ -23,7 +23,7 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_add
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
     event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
@@ -33,7 +33,10 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_add
     event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -43,12 +46,15 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notif
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -58,12 +64,15 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
      """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -73,12 +82,15 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -88,12 +100,15 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expirati
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -103,12 +118,15 @@ def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
@@ -118,12 +136,15 @@ def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
         :param hosted_scan_service: the wsd service to receive event notifications from
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: False if a fault message is received, True otherwise
+        :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
     x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
 
-    return False if x is False else True
+    if x is False:
+        return False
+    else:
+        return xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, expiration, notify_addr):
@@ -135,7 +156,7 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
         :param context_str: a string internally used to identify the selection of this wsd host as target of the scan
         :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
         :param notify_addr: The address to send notifications to.
-        :return: the token needed in CreateScanJob to start a device-initiated scan, \
+        :return: a subscription ID  and the token needed in CreateScanJob to start a device-initiated scan, \
                 or False if a fault message is received instead
     """
 
@@ -153,7 +174,8 @@ def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context
         return False
 
     dest_token = xml_find(x, ".//sca:DestinationToken").text
-    return dest_token
+    subscription_id = xml_find(x, ".//wse:Identifier").text
+    return subscription_id, dest_token
 
 
 class HTTPServerWithContext(http.server.HTTPServer):
@@ -421,15 +443,16 @@ def __demo_simple_listener():
     for b in hss:
         if "wscn:ScannerServiceType" in b.types:
             listen_addr = "http://192.168.1.109:6666/wsd"
-            wsd_scanner_all_events_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_all_events_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_scanner_elements_change_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_scanner_status_summary_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_scanner_status_condition_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_scanner_status_condition_cleared_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_job_status_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
             # wsd_job_end_state_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            dest_token = wsd_scan_available_event_subscribe(b, "PROVA_PYTHON", "python_client", "P0Y0M0DT30H0M0S",
-                                                            listen_addr)
+            (xxx, dest_token) = wsd_scan_available_event_subscribe(b, "PROVA_PYTHON", "python_client",
+                                                                   "P0Y0M0DT30H0M0S",
+                                                                   listen_addr)
             if dest_token is not None:
                 token_map["python_client"] = dest_token
                 host_map["python_client"] = b
