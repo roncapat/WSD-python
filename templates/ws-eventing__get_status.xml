@@ -13,9 +13,7 @@
         <wsa:ReplyTo>
             <wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
         </wsa:ReplyTo>
-        <wse:Identifier>
-            {{SUBSCRIPTION_ID}}
-        </wse:Identifier>
+        <wse:Identifier>{{SUBSCRIPTION_ID}}</wse:Identifier>
     </soap:Header>
     <soap:Body>
         <wse:GetStatus/>

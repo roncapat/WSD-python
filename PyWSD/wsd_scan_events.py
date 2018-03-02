@@ -12,10 +12,6 @@ from wsd_scan_operations import *
 token_map = {}
 host_map = {}
 
-
-# TODO: default no expiration
-
-
 def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_addr):
     """
         Subscribe to ScannerElementsChange events.

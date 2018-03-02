@@ -4,6 +4,10 @@
 from wsd_common import *
 
 
+# TODO: default no expiration
+# TODO: support both supported time formats, and/or hide format to user by using language facilities
+
+
 def wsd_subscribe(hosted_service, event_uri, expiration, notify_addr):
     """
     Subscribe to a certain type of events of a wsd service
@@ -54,6 +58,12 @@ def wsd_unsubscribe(hosted_service, subscription_id):
 
 def wsd_renew(hosted_service, subscription_id, expiration):
     """
+    Renew an events subscription of a wsd service
+
+    :param hosted_service: the wsd service that you want to renew the subscription
+    :param subscription_id: the ID returned from a previous successful event subscription call
+    :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
+    :return: the reply of the wsd service, or False if a fault message is received instead
     """
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
@@ -71,6 +81,11 @@ def wsd_renew(hosted_service, subscription_id, expiration):
 
 def wsd_get_status(hosted_service, subscription_id):
     """
+    Get the status of an events subscription of a wsd service
+
+    :param hosted_service: the wsd service from which you want to hear about the subscription status
+    :param subscription_id: the ID returned from a previous successful event subscription call
+    :return: the reply of the wsd service, or False if a fault message is received instead
     """
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
