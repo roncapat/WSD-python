@@ -276,7 +276,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
 
 # TODO: implement multi-device simultaneous monitoring
-# TODO: implement subscription renewal
+# TODO: implement subscription renewal (or no expiration at all during suscription)
 class WSDScannerMonitor:
     """
     A class that abstracts event handling and data querying for a device. Programmer should instantiate this class
@@ -284,6 +284,7 @@ class WSDScannerMonitor:
     directly to the device. This class listens to events and so polling devices is no longer needed.
     """
     def __init__(self, service, listen_addr, port):
+        self.service = service
         (self.description, self.configuration, self.status, self.std_ticket) = wsd_get_scanner_elements(service)
         self.active_jobs = {}
         for aj in wsd_get_active_jobs(service):
@@ -292,12 +293,7 @@ class WSDScannerMonitor:
         for ej in wsd_get_job_history(service):
             self.job_history[ej.status.id] = ej
 
-        wsd_scanner_elements_change_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
-        wsd_scanner_status_summary_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
-        wsd_scanner_status_condition_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
-        wsd_scanner_status_condition_cleared_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
-        wsd_job_status_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
-        wsd_job_end_state_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        self.subscription_id = wsd_scanner_all_events_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
 
         class QueuesSet:
             def __init__(self):
@@ -315,9 +311,13 @@ class WSDScannerMonitor:
         context = {"allow_device_initiated_scans": False,
                    "queues": self.queues}
 
-        server = HTTPServerWithContext(('', port), RequestHandler, context)
-        self.listener = threading.Thread(target=server.serve_forever, args=())
+        self.server = HTTPServerWithContext(('', port), RequestHandler, context)
+        self.listener = threading.Thread(target=self.server.serve_forever, args=())
         self.listener.start()
+
+    def close(self):
+        # self.server.shutdown()  FIXME is it the right way to stop the thread?
+        wsd_unsubscribe(self.service, self.subscription_id)
 
     def get_scanner_description(self):
         """
