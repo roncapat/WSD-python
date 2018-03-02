@@ -6,9 +6,9 @@ from io import BytesIO
 
 from PIL import Image
 
-import wsd_discovery
-import wsd_transfer
-from wsd_scan_parsers import *
+import wsd_discovery__operations
+import wsd_transfer__operations
+from wsd_scan__parsers import *
 
 
 def wsd_get_scanner_elements(hosted_scan_service):
@@ -220,7 +220,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
             e = xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
             if e == "wscn:ClientErrorNoImagesAvailable":
                 return False
-    except:
+    except etree.ParseError:
         content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
         m = email.message_from_bytes(content_with_header)
 
@@ -245,9 +245,9 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
 def __demo():
     (debug, timeout) = parse_cmd_line()
     urn = gen_urn()
-    tsl = wsd_discovery.get_devices()
+    tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
-        (ti, hss) = wsd_transfer.wsd_get(a)
+        (ti, hss) = wsd_transfer__operations.wsd_get(a)
         for b in hss:
             if "wscn:ScannerServiceType" in b.types:
                 (d, c, s, std_ticket) = wsd_get_scanner_elements(b)

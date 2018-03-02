@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import wsd_discovery
-from wsd_structures import *
+import wsd_discovery__operations
+from wsd_common import *
+from wsd_transfer__structures import *
 
 
 def wsd_get(target_service):
@@ -17,6 +18,9 @@ def wsd_get(target_service):
     x = submit_request(target_service.xaddrs[0],
                        "ws-transfer__get.xml",
                        fields)
+
+    if x is False:
+        return False
 
     meta = xml_find(x, ".//mex:Metadata")
     meta_model = xml_find(meta,
@@ -74,7 +78,7 @@ def wsd_get(target_service):
 if __name__ == "__main__":
     (debug, timeout) = parse_cmd_line()
     urn = gen_urn()
-    tsl = wsd_discovery.get_devices()
+    tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         print(a)
         (ti, hss) = wsd_get(a)

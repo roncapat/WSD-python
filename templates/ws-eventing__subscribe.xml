@@ -21,8 +21,8 @@
                     <wsa:Address>{{NOTIFY_ADDR}}</wsa:Address>
                 </wse:NotifyTo>
             </wse:Delivery>
-            <wse:Expires>{{EXPIRES}}</wse:Expires>
             <wse:Filter Dialect="{{FILTER_DIALECT}}">{{EVENT}}</wse:Filter>
+            {{OPT_EXPIRATION}}
         </wse:Subscribe>
     </soap:Body>
 </soap:Envelope>

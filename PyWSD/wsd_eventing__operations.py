@@ -8,31 +8,36 @@ from wsd_common import *
 # TODO: support both supported time formats, and/or hide format to user by using language facilities
 
 
-def wsd_subscribe(hosted_service, event_uri, expiration, notify_addr):
+def wsd_subscribe(hosted_service, event_uri, notify_addr, expiration=None):
     """
     Subscribe to a certain type of events of a wsd service
 
     :param hosted_service: the wsd service to receive event notifications from
     :param event_uri: the full URI of the targeted event class. \
                     Those URIs are taken from ws specifications
-    :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
     :param notify_addr: The address to send notifications to.
-    :return: the reply of the wsd service, or False if a fault message is received instead
+    :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
+    :return: the xml SubscribeResponse of the wsd service\
+             or False if a fault message is received instead
     """
+
+    expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration if expiration is not None else ""
+
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
                   "NOTIFY_ADDR": notify_addr,
                   "EXPIRES": expiration,
                   "FILTER_DIALECT": "http://schemas.xmlsoap.org/ws/2006/02/devprof/Action",
-                  "EVENT": event_uri}
+                  "EVENT": event_uri,
+                  "OPT_EXPIRATION": expiration_tag}
     x = submit_request(hosted_service.ep_ref_addr,
                        "ws-eventing__subscribe.xml",
                        fields_map)
 
-    if check_fault(x):
+    if x is False or check_fault(x):
         return False
 
-    return x
+    return xml_find(x, ".//wse:SubscribeResponse")
 
 
 def wsd_unsubscribe(hosted_service, subscription_id):
@@ -41,7 +46,7 @@ def wsd_unsubscribe(hosted_service, subscription_id):
 
     :param hosted_service: the wsd service from which you want to unsubscribe for events
     :param subscription_id: the ID returned from a previous successful event subscription call
-    :return: the reply of the wsd service, or False if a fault message is received instead
+    :return: False if a fault message is received instead, True otherwise
     """
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
@@ -50,10 +55,7 @@ def wsd_unsubscribe(hosted_service, subscription_id):
                        "ws-eventing__unsubscribe.xml",
                        fields_map)
 
-    if check_fault(x):
-        return False
-
-    return x
+    return False if x is False or check_fault(x) else True
 
 
 def wsd_renew(hosted_service, subscription_id, expiration):
@@ -63,8 +65,9 @@ def wsd_renew(hosted_service, subscription_id, expiration):
     :param hosted_service: the wsd service that you want to renew the subscription
     :param subscription_id: the ID returned from a previous successful event subscription call
     :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
-    :return: the reply of the wsd service, or False if a fault message is received instead
+    :return: False if a fault message is received instead, True otherwise
     """
+
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id,
@@ -73,10 +76,7 @@ def wsd_renew(hosted_service, subscription_id, expiration):
                        "ws-eventing__renew.xml",
                        fields_map)
 
-    if check_fault(x):
-        return False
-
-    return x
+    return False if x is False or check_fault(x) else True
 
 
 def wsd_get_status(hosted_service, subscription_id):
@@ -85,7 +85,9 @@ def wsd_get_status(hosted_service, subscription_id):
 
     :param hosted_service: the wsd service from which you want to hear about the subscription status
     :param subscription_id: the ID returned from a previous successful event subscription call
-    :return: the reply of the wsd service, or False if a fault message is received instead
+    :return: False if a fault message is received instead, \
+             none if the subscription has no expiration set, \
+             the expiration date otherwise
     """
     fields_map = {"FROM": urn,
                   "TO": hosted_service.ep_ref_addr,
@@ -94,23 +96,27 @@ def wsd_get_status(hosted_service, subscription_id):
                        "ws-eventing__get_status.xml",
                        fields_map)
 
-    if check_fault(x):
+    if x is False or check_fault(x):
         return False
-
-    return x
+    e = xml_find(x, ".//wse:Expires")
+    return e.text if e is not None else None
 
 
 if __name__ == "__main__":
-    import wsd_scan_events, wsd_transfer, wsd_discovery
+    import wsd_scan__events
+    import wsd_transfer__operations
+    import wsd_discovery__operations
 
     urn = gen_urn()
-    tsl = wsd_discovery.get_devices()
+    tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
-        (ti, hss) = wsd_transfer.wsd_get(a)
-        for b in hss:
-            if "wscn:ScannerServiceType" in b.types:
-                listen_addr = "http://192.168.1.109:6666/wsd"
-                h = wsd_scan_events.wsd_scanner_all_events_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-                wsd_renew(b, h, "2019-06-26T21:07:00.000-08:00")
-                wsd_get_status(b, h)
-                wsd_unsubscribe(b, h)
+        res = wsd_transfer__operations.wsd_get(a)
+        if res is not False:
+            (ti, hss) = res
+            for b in hss:
+                if "wscn:ScannerServiceType" in b.types:
+                    listen_addr = "http://192.168.1.109:6666/wsd"
+                    h = wsd_scan__events.wsd_scanner_all_events_subscribe(b, listen_addr, "P0Y0M0DT30H0M0S")
+                    # wsd_renew(b, h)
+                    wsd_get_status(b, h)
+                    wsd_unsubscribe(b, h)

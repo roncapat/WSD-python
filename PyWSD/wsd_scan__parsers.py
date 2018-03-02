@@ -3,10 +3,11 @@
 
 import copy
 
-from wsd_structures import *
+from wsd_scan__structures import *
 
 
 # TODO: use declxml https://github.com/gatkin/declxml
+# NB: declxml do not support namespaces AFAIK
 
 def parse_scan_ticket(std_ticket):
     st = ScanTicket()

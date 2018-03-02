@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+import copy
 import pickle
 import socket
 import sqlite3
 import struct
 
-from wsd_transfer import *
+from wsd_discovery__structures import *
+from wsd_transfer__operations import *
 
 
 def wsd_probe(timeout=3):
@@ -72,6 +74,7 @@ def get_devices(cache=True, discovery=True, timeout=3):
     :param cache: True if you want to use the database pointed by *WSD_CACHE_PATH* env variable \
     as a way to know about already discovered devices or not.
     :param discovery: True if you want to rely on multicast probe for device discovery.
+    :param timeout: the amount of seconds to wait for a probe response
 
     :return: a list of wsd targets as TargetService instances
     """
@@ -81,6 +84,7 @@ def get_devices(cache=True, discovery=True, timeout=3):
     if discovery is True:
         d = wsd_probe(timeout)
 
+    # TODO: avoid duplicate entries in db
     if cache is True:
         # Open the DB, if exists, or create a new one
         p = os.environ.get("WSD_CACHE_PATH", "")
@@ -100,10 +104,12 @@ def get_devices(cache=True, discovery=True, timeout=3):
             c.add(pickle.loads(row[0].encode()))
 
         # Discard not-reachable targets
+        c_ok = copy.deepcopy(c)
         for t in c:
             if wsd_get(t) is False:
-                c.remove(t)
                 cursor.execute('DELETE FROM WsdCache WHERE SerializedTarget=?', (pickle.dumps(t, 0).decode(),))
+            else:
+                c_ok.add(t)
         db.commit()
 
         # Add discovered entries to DB
@@ -113,7 +119,7 @@ def get_devices(cache=True, discovery=True, timeout=3):
 
         db.close()
 
-    return set.union(c, d)
+    return set.union(c_ok, d)
 
 
 if __name__ == "__main__":

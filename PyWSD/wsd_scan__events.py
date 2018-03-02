@@ -6,13 +6,14 @@ import queue
 import threading
 import time
 
-from wsd_eventing import *
-from wsd_scan_operations import *
+from wsd_eventing__operations import *
+from wsd_scan__operations import *
 
 token_map = {}
 host_map = {}
 
-def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_addr):
+
+def wsd_scanner_all_events_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to ScannerElementsChange events.
 
@@ -27,7 +28,7 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_add
     event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
     event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
     event_uri += " http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -35,7 +36,7 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service, expiration, notify_add
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_scanner_elements_change_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to ScannerElementsChange events.
 
@@ -45,7 +46,7 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notif
         :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -53,7 +54,7 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service, expiration, notif
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_scanner_status_summary_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to ScannerStatusSummary events.
 
@@ -63,7 +64,7 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify
         :return: False if a fault message is received, a subscription ID otherwise
      """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -71,7 +72,7 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service, expiration, notify
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_scanner_status_condition_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to ScannerStatusCondition events.
 
@@ -81,7 +82,7 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
         :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -89,7 +90,7 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service, expiration, noti
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to ScannerStatusConditionCleared events.
 
@@ -99,7 +100,7 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expirati
         :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -107,7 +108,7 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service, expirati
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_job_status_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to JobStatus events.
 
@@ -117,7 +118,7 @@ def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
         :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -125,7 +126,7 @@ def wsd_job_status_subscribe(hosted_scan_service, expiration, notify_addr):
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
+def wsd_job_end_state_subscribe(hosted_scan_service, notify_addr, expiration=None):
     """
         Subscribe to JobEndState events.
 
@@ -135,7 +136,7 @@ def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
         :return: False if a fault message is received, a subscription ID otherwise
     """
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent"
-    x = wsd_subscribe(hosted_scan_service, event_uri, expiration, notify_addr)
+    x = wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
     if x is False:
         return False
@@ -143,7 +144,7 @@ def wsd_job_end_state_subscribe(hosted_scan_service, expiration, notify_addr):
         return xml_find(x, ".//wse:Identifier").text
 
 
-def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, expiration, notify_addr):
+def wsd_scan_available_event_subscribe(hosted_scan_service, display_str, context_str, notify_addr, expiration=None):
     """
         Subscribe to ScanAvailable events.
 
@@ -265,14 +266,14 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
                 print('##\n## JOB STATUS EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
                 s = xml_find(x, ".//sca:JobStatus")
-            context["queues"].sc_job_status_q.put(parse_job_status(s))
+                context["queues"].sc_job_status_q.put(parse_job_status(s))
 
         elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
             if debug is True:
                 print('##\n## JOB END STATE EVENT\n##\n')
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True))
                 s = xml_find(x, ".//sca:JobEndState")
-            context["queues"].sc_job_ended_q.put(parse_job_summary(s))
+                context["queues"].sc_job_ended_q.put(parse_job_summary(s))
 
 
 # TODO: implement multi-device simultaneous monitoring
@@ -293,7 +294,7 @@ class WSDScannerMonitor:
         for ej in wsd_get_job_history(service):
             self.job_history[ej.status.id] = ej
 
-        self.subscription_id = wsd_scanner_all_events_subscribe(service, "P0Y0M0DT30H0M0S", listen_addr)
+        self.subscription_id = wsd_scanner_all_events_subscribe(service, listen_addr, "P0Y0M0DT30H0M0S")
 
         class QueuesSet:
             def __init__(self):
@@ -434,18 +435,18 @@ def handle_scan_available_event(client_context, scan_identifier, file_name):
 def __demo_simple_listener():
     (debug, timeout) = parse_cmd_line()
     urn = gen_urn()
-    tsl = wsd_discovery.get_devices()
-    (ti, hss) = wsd_transfer.wsd_get(list(tsl)[0])
+    tsl = wsd_discovery__operations.get_devices()
+    (ti, hss) = wsd_transfer__operations.wsd_get(list(tsl)[0])
     for b in hss:
         if "wscn:ScannerServiceType" in b.types:
             listen_addr = "http://192.168.1.109:6666/wsd"
-            # wsd_scanner_all_events_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_scanner_elements_change_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_scanner_status_summary_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_scanner_status_condition_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_scanner_status_condition_cleared_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_job_status_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
-            # wsd_job_end_state_subscribe(b, "P0Y0M0DT30H0M0S", listen_addr)
+            # wsd_scanner_all_events_subscribe(b, listen_addr)
+            # wsd_scanner_elements_change_subscribe(b, listen_addr)
+            # wsd_scanner_status_summary_subscribe(b, listen_addr)
+            # wsd_scanner_status_condition_subscribe(b, listen_addr)
+            # wsd_scanner_status_condition_cleared_subscribe(b, listen_addr)
+            # wsd_job_status_subscribe(b, listen_addr)
+            # wsd_job_end_state_subscribe(b, listen_addr)
             (xxx, dest_token) = wsd_scan_available_event_subscribe(b, "PROVA_PYTHON", "python_client",
                                                                    "P0Y0M0DT30H0M0S",
                                                                    listen_addr)
@@ -460,10 +461,8 @@ def __demo_simple_listener():
 
 
 def __demo_monitor():
-    (debug, timeout) = parse_cmd_line()
-    urn = gen_urn()
-    tsl = wsd_discovery.get_devices()
-    (ti, hss) = wsd_transfer.wsd_get(list(tsl)[0])
+    tsl = wsd_discovery__operations.get_devices()
+    (ti, hss) = wsd_transfer__operations.wsd_get(list(tsl)[0])
     for b in hss:
         if "wscn:ScannerServiceType" in b.types:
             listen_addr = "http://192.168.1.109:6666/wsd"
@@ -475,4 +474,4 @@ def __demo_monitor():
 
 if __name__ == "__main__":
     __demo_monitor()
-    #__demo_simple_listener()
+    # __demo_simple_listener()

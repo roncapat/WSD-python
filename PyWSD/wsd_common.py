@@ -93,9 +93,11 @@ def submit_request(addr, xml_template, fields_map):
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
     try:
-        r = requests.post(addr, headers=headers, data=data, timeout=1)
-    except TimeoutError:
+        r = requests.post(addr, headers=headers, data=data, timeout=5)
+    except (requests.ReadTimeout, requests.ConnectTimeout):
         return False
+        # TODO: throw a custom exception instead of returning recursively False values
+        # FIXME: actually not all calls to submit_requests can hendle properly the False return value
 
     x = etree.fromstring(r.text)
     if debug:
@@ -151,3 +153,7 @@ def xml_findall(xml_tree, query):
     """
 
     return xml_tree.findall(query, NSMAP)
+
+
+# TODO: ensure a unique URN is generated if imported multiple times
+urn = gen_urn()
