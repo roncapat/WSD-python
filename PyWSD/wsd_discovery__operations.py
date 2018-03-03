@@ -96,9 +96,10 @@ def wsd_probe(probe_timeout=3, type_filter=None):
 
 def wsd_resolve(target_service):
     """
+    Send a multicast resolve message, and wait for the targeted service to respond.
 
-    :param target_service:
-    :return:
+    :param target_service: A wsd target to resolve
+    :return: an updated TargetService with additional information gathered from resolving
     """
 
     fields = {"FROM": wsd_common.urn,
