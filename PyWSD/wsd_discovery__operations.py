@@ -2,36 +2,43 @@
 # -*- encoding: utf-8 -*-
 
 import copy
+import os
 import pickle
 import socket
 import sqlite3
 import struct
 
+import lxml.etree as etree
+
+# noinspection PyUnresolvedReferences
+import wsd_common
 from wsd_discovery__structures import *
 from wsd_transfer__operations import *
 
 
-def wsd_probe(timeout=3):
+def wsd_probe(probe_timeout=3):
     """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
+    :param probe_timeout: the number of seconds to wait for probe replies
     :return: a list of wsd targets
     """
     # TODO: allow device types filtering
-    message = message_from_file(abs_path("../templates/ws-discovery__probe.xml"), FROM=urn)
+    message = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-discovery__probe.xml"),
+                                           FROM=wsd_common.urn)
     multicast_group = ('239.255.255.250', 3702)
 
     target_services_list = set()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.settimeout(timeout)
+    sock.settimeout(probe_timeout)
     ttl = struct.pack('b', 1)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
     # Remember to allow incoming UDP packets in system firewall
 
-    if debug:
-        r = etree.fromstring(message.encode("ASCII"), parser=parser)
+    if wsd_common.debug:
+        r = etree.fromstring(message.encode("ASCII"), parser=wsd_common.parser)
         print('##\n## PROBE\n##\n')
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
     sock.sendto(message.encode("UTF-8"), multicast_group)
@@ -40,26 +47,27 @@ def wsd_probe(timeout=3):
         try:
             data, server = sock.recvfrom(4096)
         except socket.timeout:
-            if debug:
+            if wsd_common.debug:
                 print('##\n## TIMEOUT\n##\n')
             break
         else:
             x = etree.fromstring(data)
-            if debug:
+            if wsd_common.debug:
                 print('##\n## PROBE MATCH\n## %s\n##\n' % server[0])
                 print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
             ts = TargetService()
-            ts.ep_ref_addr = xml_find(x, ".//wsa:Address").text  # Optional endpoint fields not implemented yet
-            q = xml_find(x, ".//wsd:Types")
+            ts.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
+            # FIXME: optional endpoint fields not implemented yet
+            q = wsd_common.xml_find(x, ".//wsd:Types")
             if q is not None:
                 ts.types = q.text.split()
-            q = xml_find(x, ".//wsd:Scopes")
+            q = wsd_common.xml_find(x, ".//wsd:Scopes")
             if q is not None:
                 ts.scopes = q.text.split()
-            q = xml_find(x, ".//wsd:XAddrs")
+            q = wsd_common.xml_find(x, ".//wsd:XAddrs")
             if q is not None:
                 ts.xaddrs = q.text.split()
-            ts.meta_er = int(xml_find(x, ".//wsd:MetadataVersion").text)
+            ts.meta_er = int(wsd_common.xml_find(x, ".//wsd:MetadataVersion").text)
             target_services_list.add(ts)
             # TODO: rely on wsd_resolve for xaddrs field presence
 
@@ -67,22 +75,23 @@ def wsd_probe(timeout=3):
     return target_services_list
 
 
-def get_devices(cache=True, discovery=True, timeout=3):
+def get_devices(cache=True, discovery=True, probe_timeout=3):
     """
     Get a list of available wsd-enabled devices
 
     :param cache: True if you want to use the database pointed by *WSD_CACHE_PATH* env variable \
     as a way to know about already discovered devices or not.
     :param discovery: True if you want to rely on multicast probe for device discovery.
-    :param timeout: the amount of seconds to wait for a probe response
+    :param probe_timeout: the amount of seconds to wait for a probe response
 
     :return: a list of wsd targets as TargetService instances
     """
     d = set()
     c = set()
+    c_ok = set()
 
     if discovery is True:
-        d = wsd_probe(timeout)
+        d = wsd_probe(probe_timeout)
 
     # TODO: avoid duplicate entries in db
     if cache is True:
@@ -122,10 +131,13 @@ def get_devices(cache=True, discovery=True, timeout=3):
     return set.union(c_ok, d)
 
 
-if __name__ == "__main__":
-    (debug, timeout) = parse_cmd_line()
-    urn = gen_urn()
-    debug = True
-    tsl = get_devices(timeout=timeout)
+def __demo():
+    wsd_common.init()
+    wsd_common.debug = True
+    tsl = get_devices(probe_timeout=3)
     for a in tsl:
         print(a)
+
+
+if __name__ == "__main__":
+    __demo()

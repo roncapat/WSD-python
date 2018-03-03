@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+import wsd_common
 import wsd_discovery__operations
-from wsd_common import *
-from wsd_transfer__structures import *
+import wsd_transfer__structures
 
 
 def wsd_get(target_service):
@@ -13,40 +13,43 @@ def wsd_get(target_service):
     :param target_service: A wsd target
     :return: A tuple containing a TargetInfo and a list of HostedService instances.
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": target_service.ep_ref_addr}
-    x = submit_request(target_service.xaddrs[0],
-                       "ws-transfer__get.xml",
-                       fields)
+    x = wsd_common.submit_request(target_service.xaddrs[0],
+                                  "ws-transfer__get.xml",
+                                  fields)
 
     if x is False:
         return False
 
-    meta = xml_find(x, ".//mex:Metadata")
-    meta_model = xml_find(meta,
-                          ".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisModel']")
-    meta_dev = xml_find(meta,
-                        ".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisDevice']")
-    meta_rel = xml_find(meta,
-                        ".//mex:MetadataSection[@Dialect='http://schemas.xmlsoap.org/ws/2006/02/devprof/Relationship']")
+    meta = wsd_common.xml_find(x, ".//mex:Metadata")
+    meta_model = wsd_common.xml_find(meta,
+                                     ".//mex:MetadataSection[@Dialect=\
+                                     'http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisModel']")
+    meta_dev = wsd_common.xml_find(meta,
+                                   ".//mex:MetadataSection[@Dialect=\
+                                   'http://schemas.xmlsoap.org/ws/2006/02/devprof/ThisDevice']")
+    meta_rel = wsd_common.xml_find(meta,
+                                   ".//mex:MetadataSection[@Dialect=\
+                                   'http://schemas.xmlsoap.org/ws/2006/02/devprof/Relationship']")
 
-    tinfo = TargetInfo()
+    tinfo = wsd_transfer__structures.TargetInfo()
     # WSD-Profiles section 5.1 (+ PNP-X)
-    tinfo.manufacturer = xml_find(meta_model, ".//wsdp:Manufacturer").text
-    tinfo.manufacturer_url = xml_find(meta_model, ".//wsdp:ManufacturerUrl").text
-    tinfo.model_name = xml_find(meta_model, ".//wsdp:ModelName").text
-    tinfo.model_number = xml_find(meta_model, ".//wsdp:ModelNumber").text
-    tinfo.model_url = xml_find(meta_model, ".//wsdp:ModelUrl").text
-    tinfo.presentation_url = xml_find(meta_model, ".//wsdp:PresentationUrl").text
-    tinfo.device_cat = xml_find(meta_model, ".//pnpx:DeviceCategory").text.split()
+    tinfo.manufacturer = wsd_common.xml_find(meta_model, ".//wsdp:Manufacturer").text
+    tinfo.manufacturer_url = wsd_common.xml_find(meta_model, ".//wsdp:ManufacturerUrl").text
+    tinfo.model_name = wsd_common.xml_find(meta_model, ".//wsdp:ModelName").text
+    tinfo.model_number = wsd_common.xml_find(meta_model, ".//wsdp:ModelNumber").text
+    tinfo.model_url = wsd_common.xml_find(meta_model, ".//wsdp:ModelUrl").text
+    tinfo.presentation_url = wsd_common.xml_find(meta_model, ".//wsdp:PresentationUrl").text
+    tinfo.device_cat = wsd_common.xml_find(meta_model, ".//pnpx:DeviceCategory").text.split()
 
-    tinfo.friendly_name = xml_find(meta_dev, ".//wsdp:FriendlyName").text
-    tinfo.fw_ver = xml_find(meta_dev, ".//wsdp:FirmwareVersion").text
-    tinfo.serial_num = xml_find(meta_dev, ".//wsdp:SerialNumber").text
+    tinfo.friendly_name = wsd_common.xml_find(meta_dev, ".//wsdp:FriendlyName").text
+    tinfo.fw_ver = wsd_common.xml_find(meta_dev, ".//wsdp:FirmwareVersion").text
+    tinfo.serial_num = wsd_common.xml_find(meta_dev, ".//wsdp:SerialNumber").text
 
     hservices = []
     # WSD-Profiles section 5.2 (+ PNP-X)
-    xml_findall(meta_rel, ".//wsdp:Relationship[@Type='http://schemas.xmlsoap.org/ws/2006/02/devprof/host']")
+    wsd_common.xml_findall(meta_rel, ".//wsdp:Relationship[@Type='http://schemas.xmlsoap.org/ws/2006/02/devprof/host']")
 
     for r in meta_rel:
         # UNCLEAR how the host item should differ from the target endpoint, and how to manage multiple host items
@@ -57,27 +60,27 @@ def wsd_get(target_service):
         #    xml_find(host, ".//wsdp:ServiceId").text
         #    er = xml_find(host, ".//wsa:EndpointReference")
         #    xml_find(er, ".//wsa:Address").text  #Optional endpoint fields not implemented yet
-        hosted = xml_findall(r, ".//wsdp:Hosted")
+        hosted = wsd_common.xml_findall(r, ".//wsdp:Hosted")
         for h in hosted:
-            hs = HostedService()
-            hs.types = xml_find(h, ".//wsdp:Types").text.split()
-            hs.service_id = xml_find(h, ".//wsdp:ServiceId").text
-            hs.hardware_id = xml_find(h, ".//pnpx:HardwareId").text
-            hs.compatible_id = xml_find(h, ".//pnpx:CompatibleId").text
-            q = xml_find(h, ".//wsdp:ServiceAddress")
+            hs = wsd_transfer__structures.HostedService()
+            hs.types = wsd_common.xml_find(h, ".//wsdp:Types").text.split()
+            hs.service_id = wsd_common.xml_find(h, ".//wsdp:ServiceId").text
+            hs.hardware_id = wsd_common.xml_find(h, ".//pnpx:HardwareId").text
+            hs.compatible_id = wsd_common.xml_find(h, ".//pnpx:CompatibleId").text
+            q = wsd_common.xml_find(h, ".//wsdp:ServiceAddress")
             if q:
                 hs.service_address = q.text
-            er = xml_find(h, ".//wsa:EndpointReference")
-            hs.ep_ref_addr = xml_find(er, ".//wsa:Address").text
+            er = wsd_common.xml_find(h, ".//wsa:EndpointReference")
+            hs.ep_ref_addr = wsd_common.xml_find(er, ".//wsa:Address").text
             hservices.append(hs)
 
     # WSD-Profiles section 5.3 and 5.4 omitted
     return tinfo, hservices
 
 
-if __name__ == "__main__":
-    (debug, timeout) = parse_cmd_line()
-    urn = gen_urn()
+def __demo():
+    wsd_common.init()
+    (wsd_common.debug, timeout) = wsd_common.parse_cmd_line()
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         print(a)
@@ -85,3 +88,7 @@ if __name__ == "__main__":
         print(ti)
         for b in hss:
             print(b)
+
+
+if __name__ == "__main__":
+    __demo()

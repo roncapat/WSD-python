@@ -101,7 +101,7 @@ def submit_request(addr, xml_template, fields_map):
 
     x = etree.fromstring(r.text)
     if debug:
-        print('##\n## %s RESPONSE\n##\n', op_name)
+        print('##\n## %s RESPONSE\n##\n' % op_name)
         print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
     return x
 
@@ -155,5 +155,6 @@ def xml_findall(xml_tree, query):
     return xml_tree.findall(query, NSMAP)
 
 
-# TODO: ensure a unique URN is generated if imported multiple times
-urn = gen_urn()
+def init():
+    global urn
+    urn = gen_urn()

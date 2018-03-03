@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-from wsd_common import *
+import wsd_common
 
 
-# TODO: default no expiration
 # TODO: support both supported time formats, and/or hide format to user by using language facilities
 
 
@@ -23,21 +22,21 @@ def wsd_subscribe(hosted_service, event_uri, notify_addr, expiration=None):
 
     expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration if expiration is not None else ""
 
-    fields_map = {"FROM": urn,
+    fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "NOTIFY_ADDR": notify_addr,
                   "EXPIRES": expiration,
                   "FILTER_DIALECT": "http://schemas.xmlsoap.org/ws/2006/02/devprof/Action",
                   "EVENT": event_uri,
                   "OPT_EXPIRATION": expiration_tag}
-    x = submit_request(hosted_service.ep_ref_addr,
-                       "ws-eventing__subscribe.xml",
-                       fields_map)
+    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+                                  "ws-eventing__subscribe.xml",
+                                  fields_map)
 
-    if x is False or check_fault(x):
+    if x is False or wsd_common.check_fault(x):
         return False
 
-    return xml_find(x, ".//wse:SubscribeResponse")
+    return wsd_common.xml_find(x, ".//wse:SubscribeResponse")
 
 
 def wsd_unsubscribe(hosted_service, subscription_id):
@@ -48,14 +47,14 @@ def wsd_unsubscribe(hosted_service, subscription_id):
     :param subscription_id: the ID returned from a previous successful event subscription call
     :return: False if a fault message is received instead, True otherwise
     """
-    fields_map = {"FROM": urn,
+    fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
-    x = submit_request(hosted_service.ep_ref_addr,
-                       "ws-eventing__unsubscribe.xml",
-                       fields_map)
+    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+                                  "ws-eventing__unsubscribe.xml",
+                                  fields_map)
 
-    return False if x is False or check_fault(x) else True
+    return False if x is False or wsd_common.check_fault(x) else True
 
 
 def wsd_renew(hosted_service, subscription_id, expiration):
@@ -68,15 +67,15 @@ def wsd_renew(hosted_service, subscription_id, expiration):
     :return: False if a fault message is received instead, True otherwise
     """
 
-    fields_map = {"FROM": urn,
+    fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id,
                   "EXPIRES": expiration}
-    x = submit_request(hosted_service.ep_ref_addr,
-                       "ws-eventing__renew.xml",
-                       fields_map)
+    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+                                  "ws-eventing__renew.xml",
+                                  fields_map)
 
-    return False if x is False or check_fault(x) else True
+    return False if x is False or wsd_common.check_fault(x) else True
 
 
 def wsd_get_status(hosted_service, subscription_id):
@@ -89,25 +88,25 @@ def wsd_get_status(hosted_service, subscription_id):
              none if the subscription has no expiration set, \
              the expiration date otherwise
     """
-    fields_map = {"FROM": urn,
+    fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
-    x = submit_request(hosted_service.ep_ref_addr,
-                       "ws-eventing__get_status.xml",
-                       fields_map)
+    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+                                  "ws-eventing__get_status.xml",
+                                  fields_map)
 
-    if x is False or check_fault(x):
+    if x is False or wsd_common.check_fault(x):
         return False
-    e = xml_find(x, ".//wse:Expires")
+    e = wsd_common.xml_find(x, ".//wse:Expires")
     return e.text if e is not None else None
 
 
-if __name__ == "__main__":
+def __demo():
     import wsd_scan__events
     import wsd_transfer__operations
     import wsd_discovery__operations
 
-    urn = gen_urn()
+    wsd_common.init()
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         res = wsd_transfer__operations.wsd_get(a)
@@ -120,3 +119,7 @@ if __name__ == "__main__":
                     # wsd_renew(b, h)
                     wsd_get_status(b, h)
                     wsd_unsubscribe(b, h)
+
+
+if __name__ == "__main__":
+    __demo()

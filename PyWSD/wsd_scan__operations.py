@@ -4,11 +4,14 @@
 import email
 from io import BytesIO
 
+import lxml.etree as etree
+import requests
 from PIL import Image
 
+import wsd_common
 import wsd_discovery__operations
+import wsd_scan__parsers
 import wsd_transfer__operations
-from wsd_scan__parsers import *
 
 
 def wsd_get_scanner_elements(hosted_scan_service):
@@ -20,22 +23,22 @@ def wsd_get_scanner_elements(hosted_scan_service):
     :param hosted_scan_service: the wsd scan service to query
     :return: a tuple of the form (ScannerDescription, ScannerConfiguration, ScannerStatus, ScanTicket)
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__get_scanner_elements.xml",
-                       fields)
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__get_scanner_elements.xml",
+                                  fields)
 
-    re = xml_find(x, ".//sca:ScannerElements")
-    sca_status = xml_find(re, ".//sca:ScannerStatus")
-    sca_config = xml_find(re, ".//sca:ScannerConfiguration")
-    sca_descr = xml_find(re, ".//sca:ScannerDescription")
-    std_ticket = xml_find(re, ".//sca:DefaultScanTicket")
+    re = wsd_common.xml_find(x, ".//sca:ScannerElements")
+    sca_status = wsd_common.xml_find(re, ".//sca:ScannerStatus")
+    sca_config = wsd_common.xml_find(re, ".//sca:ScannerConfiguration")
+    sca_descr = wsd_common.xml_find(re, ".//sca:ScannerDescription")
+    std_ticket = wsd_common.xml_find(re, ".//sca:DefaultScanTicket")
 
-    description = parse_scan_description(sca_descr)
-    status = parse_scan_status(sca_status)
-    config = parse_scan_configuration(sca_config)
-    std_ticket = parse_scan_ticket(std_ticket)
+    description = wsd_scan__parsers.parse_scan_description(sca_descr)
+    status = wsd_scan__parsers.parse_scan_status(sca_status)
+    config = wsd_scan__parsers.parse_scan_configuration(sca_config)
+    std_ticket = wsd_scan__parsers.parse_scan_ticket(std_ticket)
 
     return description, config, status, std_ticket
 
@@ -52,18 +55,18 @@ def wsd_validate_scan_ticket(hosted_scan_service, tkt):
     validation, along with the same ticket submitted, or False if errors were found, along with a corrected ticket.
     """
 
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__validate_scan_ticket.xml",
-                       {**fields, **tkt.as_map()})
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__validate_scan_ticket.xml",
+                                  {**fields, **tkt.as_map()})
 
-    v = xml_find(x, ".//sca:ValidTicket")
+    v = wsd_common.xml_find(x, ".//sca:ValidTicket")
 
     if v.text == 'true' or v.text == '1':
         return True, tkt
     else:
-        return False, parse_scan_ticket(xml_find(x, ".//sca::ValidScanTicket"))
+        return False, wsd_scan__parsers.parse_scan_ticket(wsd_common.xml_find(x, ".//sca::ValidScanTicket"))
 
 
 def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token=""):
@@ -78,17 +81,17 @@ def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token
     :return: a ScanJob instance
     """
 
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "SCAN_ID": scan_identifier,
               "DEST_TOKEN": dest_token}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__create_scan_job.xml",
-                       {**fields, **tkt.as_map()})
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__create_scan_job.xml",
+                                  {**fields, **tkt.as_map()})
 
-    x = xml_find(x, ".//sca:CreateScanJobResponse")
+    x = wsd_common.xml_find(x, ".//sca:CreateScanJobResponse")
 
-    return parse_scan_job(x)
+    return wsd_scan__parsers.parse_scan_job(x)
 
 
 def wsd_cancel_job(hosted_scan_service, job):
@@ -100,14 +103,14 @@ def wsd_cancel_job(hosted_scan_service, job):
     :param job: the ScanJob instance representing the job to abort
     :return: True if the job is found and then aborted, False if the specified job do not exists or already ended.
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__cancel_job.xml",
-                       fields)
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__cancel_job.xml",
+                                  fields)
 
-    xml_find(x, ".//sca:ClientErrorJobIdNotFound")
+    wsd_common.xml_find(x, ".//sca:ClientErrorJobIdNotFound")
     return x is None
 
 
@@ -122,22 +125,22 @@ def wsd_get_job_elements(hosted_scan_service, job):
     :return: a tuple of the form (JobStatus, ScanTicket, DocumentParams, doclist),\
     where doclist is a list of document names
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__get_job_elements.xml",
-                       fields)
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__get_job_elements.xml",
+                                  fields)
 
-    q = xml_find(x, ".//sca:JobStatus")
-    jstatus = parse_job_status(q)
+    q = wsd_common.xml_find(x, ".//sca:JobStatus")
+    jstatus = wsd_scan__parsers.parse_job_status(q)
 
-    st = xml_find(x, ".//sca:ScanTicket")
-    tkt = parse_scan_ticket(st)
+    st = wsd_common.xml_find(x, ".//sca:ScanTicket")
+    tkt = wsd_scan__parsers.parse_scan_ticket(st)
 
-    dfp = xml_find(x, ".//sca:Documents/sca:DocumentFinalParameters")
-    dps = parse_document_params(dfp)
-    dlist = [x.text for x in xml_findall(dfp, "sca:Document/sca:DocumentDescription/sca:DocumentName")]
+    dfp = wsd_common.xml_find(x, ".//sca:Documents/sca:DocumentFinalParameters")
+    dps = wsd_scan__parsers.parse_document_params(dfp)
+    dlist = [x.text for x in wsd_common.xml_findall(dfp, "sca:Document/sca:DocumentDescription/sca:DocumentName")]
 
     return jstatus, tkt, dps, dlist
 
@@ -150,15 +153,15 @@ def wsd_get_active_jobs(hosted_scan_service):
     :param hosted_scan_service: the wsd scan service to query
     :return: a list of JobStatus elements
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__get_active_jobs.xml",
-                       fields)
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__get_active_jobs.xml",
+                                  fields)
 
     jsl = []
-    for y in xml_findall(x, ".//sca:JobSummary"):
-        jsl.append(parse_job_summary(y))
+    for y in wsd_common.xml_findall(x, ".//sca:JobSummary"):
+        jsl.append(wsd_scan__parsers.parse_job_summary(y))
 
     return jsl
 
@@ -172,15 +175,15 @@ def wsd_get_job_history(hosted_scan_service):
     :param hosted_scan_service: the wsd scan service to query
     :return: a list of JobStatus elements.
     """
-    fields = {"FROM": urn,
+    fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = submit_request(hosted_scan_service.ep_ref_addr,
-                       "ws-scan__get_job_history.xml",
-                       fields)
+    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                  "ws-scan__get_job_history.xml",
+                                  fields)
 
     jsl = []
-    for y in xml_findall(x, ".//sca:JobSummary"):
-        jsl.append(parse_job_summary(y))
+    for y in wsd_common.xml_findall(x, ".//sca:JobSummary"):
+        jsl.append(wsd_scan__parsers.parse_job_summary(y))
 
     return jsl
 
@@ -199,25 +202,25 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
     :return: True if image is available, False otherwise
     """
 
-    data = message_from_file(abs_path("../templates/ws-scan__retrieve_image.xml"),
-                             FROM=urn,
-                             TO=hosted_scan_service.ep_ref_addr,
-                             JOB_ID=job.id,
-                             JOB_TOKEN=job.token,
-                             DOC_DESCR=docname)
+    data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),
+                                        FROM=wsd_common.urn,
+                                        TO=hosted_scan_service.ep_ref_addr,
+                                        JOB_ID=job.id,
+                                        JOB_TOKEN=job.token,
+                                        DOC_DESCR=docname)
 
-    if debug:
-        r = etree.fromstring(data.encode("ASCII"), parser=parser)
+    if wsd_common.debug:
+        r = etree.fromstring(data.encode("ASCII"), parser=wsd_common.parser)
         print('##\n## RETRIEVE IMAGE REQUEST\n##\n')
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-    r = requests.post(hosted_scan_service.ep_ref_addr, headers=headers, data=data)
+    r = requests.post(hosted_scan_service.ep_ref_addr, headers=wsd_common.headers, data=data)
 
     try:
         x = etree.fromstring(r.text)
-        q = xml_find(x, ".//soap:Fault")
+        q = wsd_common.xml_find(x, ".//soap:Fault")
         if q is not None:
-            e = xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
+            e = wsd_common.xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
             if e == "wscn:ClientErrorNoImagesAvailable":
                 return False
     except etree.ParseError:
@@ -226,7 +229,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
 
         ls = list(m.walk())
 
-        if debug:
+        if wsd_common.debug:
             print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
 
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
@@ -243,8 +246,8 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
 
 
 def __demo():
-    (debug, timeout) = parse_cmd_line()
-    urn = gen_urn()
+    wsd_common.init()
+    (wsd_common.debug, timeout) = wsd_common.parse_cmd_line()
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         (ti, hss) = wsd_transfer__operations.wsd_get(a)

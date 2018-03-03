@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-from wsd_common import *
+import wsd_common
 
 
 class ScannerCondition:
@@ -37,11 +37,11 @@ class ScannerStatus:
         s += "Reasons:              %s\n" % ", ".join(self.reasons)
         s += "Active conditions:\n"
         for ac_id, ac in self.active_conditions.items():
-            s += indent(str(ac))
+            s += wsd_common.indent(str(ac))
         s += "Condition history:\n"
         for t, c in self.conditions_history.items():
-            s += indent(str(c))
-            s += indent("Clear time: %s\n" % t)
+            s += wsd_common.indent(str(c))
+            s += wsd_common.indent("Clear time: %s\n" % t)
         return s
 
 
@@ -128,10 +128,10 @@ class DocumentParams:
         s += "Rotation:             %d\n" % self.rotation
         if self.front is not None:
             s += "Front side:\n"
-            s += indent(str(self.front))
+            s += wsd_common.indent(str(self.front))
         if self.back is not None:
             s += "Back side:\n"
-            s += indent(str(self.back))
+            s += wsd_common.indent(str(self.back))
         return s
 
 
@@ -148,7 +148,7 @@ class ScanTicket:
         s += "User name:            %s\n" % self.job_user_name
         s += "Job info:             %s\n" % self.job_info
         s += "Document parameters:\n"
-        s += indent(str(self.doc_params))
+        s += wsd_common.indent(str(self.doc_params))
         return s
 
     def as_map(self):
@@ -212,7 +212,7 @@ class ScanJob:
             s += "\tLines count:          %s\n" % self.b_num_lines
             s += "\tBytes/line:           %s\n" % self.b_byte_line
         s += "Document parameters:\n"
-        s += indent(str(self.doc_params))
+        s += wsd_common.indent(str(self.doc_params))
         return s
 
 
@@ -293,12 +293,12 @@ class ScannerConfiguration:
         s += str(self.settings)
         if self.platen is not None:
             s += "Platen settings:\n"
-            s += indent(str(self.platen))
+            s += wsd_common.indent(str(self.platen))
         if self.front_adf is not None:
             s += "ADF Duplex:           %r\n" % self.adf_duplex
             s += "ADF front settings:\n"
-            s += indent(str(self.front_adf))
+            s += wsd_common.indent(str(self.front_adf))
             if self.adf_duplex:
                 s += "ADF back settings:\n"
-                s += indent(str(self.back_adf))
+                s += wsd_common.indent(str(self.back_adf))
         return s
