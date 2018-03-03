@@ -16,16 +16,20 @@ from wsd_discovery__structures import *
 from wsd_transfer__operations import *
 
 
-def wsd_probe(probe_timeout=3):
+def wsd_probe(probe_timeout=3, type_filter=None):
     """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
     :param probe_timeout: the number of seconds to wait for probe replies
+    :param type_filter: a string of space-separated device types
     :return: a list of wsd targets
     """
-    # TODO: allow device types filtering
+
+    opt_types = "" if type_filter is None else "<d:Types>%s</d:Types>" % type_filter
+
     message = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-discovery__probe.xml"),
-                                           FROM=wsd_common.urn)
+                                           FROM=wsd_common.urn,
+                                           OPT_TYPES=opt_types)
     multicast_group = ('239.255.255.250', 3702)
 
     target_services_list = set()
@@ -75,7 +79,7 @@ def wsd_probe(probe_timeout=3):
     return target_services_list
 
 
-def get_devices(cache=True, discovery=True, probe_timeout=3):
+def get_devices(cache=True, discovery=True, probe_timeout=3, type_filter=None):
     """
     Get a list of available wsd-enabled devices
 
@@ -91,9 +95,10 @@ def get_devices(cache=True, discovery=True, probe_timeout=3):
     c_ok = set()
 
     if discovery is True:
-        d = wsd_probe(probe_timeout)
+        d = wsd_probe(probe_timeout, type_filter)
 
     # TODO: avoid duplicate entries in db
+    # TODO: return only entries that match the type_filter
     if cache is True:
         # Open the DB, if exists, or create a new one
         p = os.environ.get("WSD_CACHE_PATH", "")
@@ -134,7 +139,7 @@ def get_devices(cache=True, discovery=True, probe_timeout=3):
 def __demo():
     wsd_common.init()
     wsd_common.debug = True
-    tsl = get_devices(probe_timeout=3)
+    tsl = get_devices(probe_timeout=3, type_filter="wscn:ScanDeviceType")
     for a in tsl:
         print(a)
 

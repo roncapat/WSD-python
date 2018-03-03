@@ -13,6 +13,7 @@
     </s:Header>
     <s:Body>
         <d:Probe>
+            {{OPT_TYPES}}
         </d:Probe>
     </s:Body>
 </s:Envelope>
