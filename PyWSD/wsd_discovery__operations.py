@@ -88,7 +88,7 @@ def wsd_probe(probe_timeout=3, type_filter=None):
         ts = read_soap_msg_from_socket(sock, wsd_discovery__structures.TargetService(), "PROBE")
         if ts is False:
             break
-            target_services_list.add(ts)
+        target_services_list.add(ts)
 
     sock.close()
     return target_services_list
