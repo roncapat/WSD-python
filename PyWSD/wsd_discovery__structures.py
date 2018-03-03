@@ -5,9 +5,9 @@
 class TargetService:
     def __init__(self):
         self.ep_ref_addr = ""
-        self.types = []
-        self.scopes = []
-        self.xaddrs = []
+        self.types = set()
+        self.scopes = set()
+        self.xaddrs = set()
         self.meta_ver = 0
 
     def __str__(self):

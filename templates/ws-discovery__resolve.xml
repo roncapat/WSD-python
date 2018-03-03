@@ -3,14 +3,18 @@
                xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
                xmlns:wsd="http://schemas.xmlsoap.org/ws/2005/04/discovery">
     <soap:Header>
-        <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
         <wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Resolve</wsa:Action>
+        <wsa:From>
+            <wsa:Address>{{FROM}}</wsa:Address>
+        </wsa:From>
+        <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
         <wsa:MessageID>urn:uuid:f4d6720a-d248-4366-b6e6-2df030f8cffa</wsa:MessageID>
+        <wsa:ReplyTo>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:ReplyTo>
     </soap:Header>
     <soap:Body>
         <wsd:Resolve>
             <wsa:EndpointReference>
-                <wsa:Address>urn:uuid:00000000-0000-1000-8000-f4813944662e</wsa:Address>
+                <wsa:Address>{{EP_ADDR}}</wsa:Address>
             </wsa:EndpointReference>
         </wsd:Resolve>
     </soap:Body>
