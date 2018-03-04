@@ -61,7 +61,7 @@ def read_soap_msg_from_socket(sock, target_service, operation_str):
         q = wsd_common.xml_find(x, ".//wsd:XAddrs")
         if q is not None:
             target_service.xaddrs = target_service.xaddrs.union(q.text.split())
-        target_service.meta_er = int(wsd_common.xml_find(x, ".//wsd:MetadataVersion").text)
+        target_service.meta_ver = int(wsd_common.xml_find(x, ".//wsd:MetadataVersion").text)
     return target_service
 
 
