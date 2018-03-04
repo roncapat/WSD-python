@@ -7,7 +7,7 @@ import wsd_common
 import wsd_scan__structures
 
 
-# TODO: use declxml https://github.com/gatkin/declxml
+# try to use declxml https://github.com/gatkin/declxml
 # NB: declxml do not support namespaces AFAIK
 
 def parse_scan_ticket(std_ticket):

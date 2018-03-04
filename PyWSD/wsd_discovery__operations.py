@@ -44,7 +44,7 @@ def read_soap_msg_from_socket(sock, target_service, operation_str):
     except socket.timeout:
         if wsd_common.debug:
             print('##\n## TIMEOUT\n##\n')
-            return False
+        return False
     else:
         x = etree.fromstring(data)
         if wsd_common.debug:

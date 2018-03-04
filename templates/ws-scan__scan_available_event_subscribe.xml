@@ -21,7 +21,7 @@
                     <wsa:Address>{{NOTIFY_ADDR}}</wsa:Address>
                 </wse:NotifyTo>
             </wse:Delivery>
-            <wse:Expires>{{EXPIRES}}</wse:Expires>
+            {{OPT_EXPIRATION}}
             <wse:Filter Dialect="http://schemas.xmlsoap.org/ws/2006/02/devprof/Action">
                 http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent
             </wse:Filter>

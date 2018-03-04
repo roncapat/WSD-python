@@ -247,7 +247,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
 
 def __demo():
     wsd_common.init()
-    (wsd_common.debug, timeout) = wsd_common.parse_cmd_line()
+    wsd_common.debug = False
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         (ti, hss) = wsd_transfer__operations.wsd_get(a)

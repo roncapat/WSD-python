@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
+import typing
+from datetime import datetime, timedelta
+
 import wsd_common
+import xml_helpers
 
 
-# TODO: support both supported time formats, and/or hide format to user by using language facilities
-
-
-def wsd_subscribe(hosted_service, event_uri, notify_addr, expiration=None):
+def wsd_subscribe(hosted_service,
+                  event_uri,
+                  notify_addr,
+                  expiration: typing.Union[datetime, timedelta] = None):
     """
     Subscribe to a certain type of events of a wsd service
 
@@ -15,12 +19,23 @@ def wsd_subscribe(hosted_service, event_uri, notify_addr, expiration=None):
     :param event_uri: the full URI of the targeted event class. \
                     Those URIs are taken from ws specifications
     :param notify_addr: The address to send notifications to.
-    :param expiration: Expiration time, as a string in the following form: P*Y**M**DT**H**M**S
+    :param expiration: Expiration time, as a datetime or timedelta object
     :return: the xml SubscribeResponse of the wsd service\
              or False if a fault message is received instead
     """
 
-    expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration if expiration is not None else ""
+    if expiration is None:
+        pass
+    elif isinstance(expiration, datetime):
+        expiration = xml_helpers.fmt_as_xml_datetime(expiration)
+    elif isinstance(expiration, timedelta):
+        expiration = xml_helpers.fmt_as_xml_duration(expiration)
+    else:
+        raise TypeError("Type %s not allowed" % expiration.__class__)
+
+    expiration_tag = ""
+    if expiration is not None:
+        expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration
 
     fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
@@ -98,7 +113,7 @@ def wsd_get_status(hosted_service, subscription_id):
     if x is False or wsd_common.check_fault(x):
         return False
     e = wsd_common.xml_find(x, ".//wse:Expires")
-    return e.text if e is not None else None
+    return xml_helpers.parse_xml_datetime(e.text.replace(" ", ""), weak=True) if e is not None else None
 
 
 def __demo():
@@ -115,9 +130,11 @@ def __demo():
             for b in hss:
                 if "wscn:ScannerServiceType" in b.types:
                     listen_addr = "http://192.168.1.109:6666/wsd"
-                    h = wsd_scan__events.wsd_scanner_all_events_subscribe(b, listen_addr, "P0Y0M0DT30H0M0S")
+                    h = wsd_scan__events.wsd_scanner_all_events_subscribe(b,
+                                                                          listen_addr,
+                                                                          datetime.now() + timedelta(days=2))
                     # wsd_renew(b, h)
-                    wsd_get_status(b, h)
+                    print(wsd_get_status(b, h))
                     wsd_unsubscribe(b, h)
 
 
