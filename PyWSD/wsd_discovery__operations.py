@@ -54,13 +54,13 @@ def read_soap_msg_from_socket(sock, target_service, operation_str):
         target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
         q = wsd_common.xml_find(x, ".//wsd:Types")
         if q is not None:
-            target_service.types.union(q.text.split())
+            target_service.types = target_service.types.union(q.text.split())
         q = wsd_common.xml_find(x, ".//wsd:Scopes")
         if q is not None:
-            target_service.scopes.union(q.text.split())
+            target_service.scopes = target_service.scopes.union(q.text.split())
         q = wsd_common.xml_find(x, ".//wsd:XAddrs")
         if q is not None:
-            target_service.xaddrs.union(q.text.split())
+            target_service.xaddrs = target_service.xaddrs.union(q.text.split())
         target_service.meta_er = int(wsd_common.xml_find(x, ".//wsd:MetadataVersion").text)
     return target_service
 

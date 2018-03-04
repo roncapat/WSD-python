@@ -15,7 +15,7 @@ def wsd_get(target_service):
     """
     fields = {"FROM": wsd_common.urn,
               "TO": target_service.ep_ref_addr}
-    x = wsd_common.submit_request(target_service.xaddrs[0],
+    x = wsd_common.submit_request(next(iter(target_service.xaddrs)),
                                   "ws-transfer__get.xml",
                                   fields)
 
