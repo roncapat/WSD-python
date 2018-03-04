@@ -173,7 +173,7 @@ def get_devices(cache: bool = True,
 
         # Add discovered entries to DB
         for i in d_resolved:
-            cursor.execute('INSERT INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
+            cursor.execute('INSERT OR REPLACE INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
                            (i.ep_ref_addr, pickle.dumps(i, 0).decode(),))
         db.commit()
 
