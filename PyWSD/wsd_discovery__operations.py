@@ -65,7 +65,8 @@ def read_soap_msg_from_socket(sock, target_service, operation_str):
     return target_service
 
 
-def wsd_probe(probe_timeout=3, type_filter=None):
+def wsd_probe(probe_timeout: int = 3,
+              type_filter: str = None):
     """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
@@ -94,7 +95,7 @@ def wsd_probe(probe_timeout=3, type_filter=None):
     return target_services_list
 
 
-def wsd_resolve(target_service):
+def wsd_resolve(target_service: wsd_discovery__structures.TargetService):
     """
     Send a multicast resolve message, and wait for the targeted service to respond.
 
@@ -118,7 +119,10 @@ def wsd_resolve(target_service):
         return ts
 
 
-def get_devices(cache=True, discovery=True, probe_timeout=3, type_filter=None):
+def get_devices(cache: bool = True,
+                discovery: bool = True,
+                probe_timeout: int = 3,
+                type_filter: str = None):
     """
     Get a list of available wsd-enabled devices
 
