@@ -139,7 +139,6 @@ def get_devices(cache=True, discovery=True, probe_timeout=3, type_filter=None):
         for t in d:
             d_resolved.add(wsd_resolve(t))
 
-    # TODO: avoid duplicate entries in db
     # TODO: return only entries that match the type_filter
     if cache is True:
         # Open the DB, if exists, or create a new one
@@ -151,26 +150,27 @@ def get_devices(cache=True, discovery=True, probe_timeout=3, type_filter=None):
         db = sqlite3.connect(p)
         cursor = db.cursor()
 
-        cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (SerializedTarget TEXT);")
+        cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (EpRefAddr TEXT PRIMARY KEY, SerializedTarget TEXT);")
         db.commit()
 
         # Read entries from DB
-        cursor.execute('SELECT DISTINCT SerializedTarget FROM WsdCache')
+        cursor.execute('SELECT DISTINCT EpRefAddr, SerializedTarget FROM WsdCache')
         for row in cursor:
-            c.add(pickle.loads(row[0].encode()))
+            c.add(pickle.loads(row[1].encode()))
 
         # Discard not-reachable targets
         c_ok = copy.deepcopy(c)
         for t in c:
             if wsd_transfer__operations.wsd_get(t) is False:
-                cursor.execute('DELETE FROM WsdCache WHERE SerializedTarget=?', (pickle.dumps(t, 0).decode(),))
+                cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', t.ep_ref_addr)
             else:
                 c_ok.add(t)
         db.commit()
 
         # Add discovered entries to DB
         for i in d_resolved:
-            cursor.execute('INSERT INTO WsdCache(SerializedTarget) VALUES (?)', (pickle.dumps(i, 0).decode(),))
+            cursor.execute('INSERT INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
+                           (i.ep_ref_addr, pickle.dumps(i, 0).decode(),))
         db.commit()
 
         db.close()

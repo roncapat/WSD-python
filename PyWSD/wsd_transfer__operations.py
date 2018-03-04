@@ -80,7 +80,7 @@ def wsd_get(target_service):
 
 def __demo():
     wsd_common.init()
-    (wsd_common.debug, timeout) = wsd_common.parse_cmd_line()
+    wsd_common.debug = True
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         print(a)
