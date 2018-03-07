@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import typing
 import uuid
 
 import lxml.etree as etree
@@ -106,12 +107,15 @@ def submit_request(addr, xml_template, fields_map):
     return x
 
 
-def check_fault(xml_soap_tree):
+def check_fault(xml_soap_tree: etree.ElementTree) \
+        -> bool:
     """
     Check if this soap message represents a Fault or not
 
-    :param xml_soap_tree: an lxml.Etree instance obtained by parsing a wsd service reply
+    :param xml_soap_tree: an xml tree obtained by parsing a wsd service reply
+    :type xml_soap_tree: lxml.etree.ElementTree
     :return: True if a fault message is detected, False otherwise
+    :rtype: bool
     """
     action = xml_find(xml_soap_tree, ".//wsa:Action").text
     if action == 'http://schemas.xmlsoap.org/ws/2004/08/addressing/fault':
@@ -130,26 +134,36 @@ def check_fault(xml_soap_tree):
         return False
 
 
-def xml_find(xml_tree, query):
+def xml_find(xml_tree: etree.ElementTree,
+             query: str) \
+        -> typing.Union[etree.ElementTree, None]:
     """
     Wrapper for etree.find() method. When parsing wsd xml/soap messages, you should use this wrapper,
     because it encapsulates all the xml namespaces needed and avoids coding errors.
 
     :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
     :param query: the XPath query
+    :type query: str
     :return: the searched etree if found, or None otherwise
+    :rtype: typing.Union[etree.ElementTree, None]
     """
     return xml_tree.find(query, NSMAP)
 
 
-def xml_findall(xml_tree, query):
+def xml_findall(xml_tree: etree.ElementTree,
+                query: str) \
+        -> typing.Union[etree.ElementTree, None]:
     """
     Wrapper for etree.findall() method. When parsing wsd xml/soap messages, you should use this wrapper,
     because it encapsulates all the xml namespaces needed and avoids coding errors.
 
     :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
     :param query: the XPath query
+    :type query: str
     :return: a list of searched etrees if found, or None otherwise
+    :rtype: typing.Union[etree.ElementTree, None]
     """
 
     return xml_tree.findall(query, NSMAP)
