@@ -42,10 +42,7 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service,
@@ -65,10 +62,7 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service,
@@ -88,10 +82,7 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service,
@@ -111,10 +102,7 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service,
@@ -134,10 +122,7 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_status_subscribe(hosted_scan_service,
@@ -154,10 +139,7 @@ def wsd_job_status_subscribe(hosted_scan_service,
     event_uri = "http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent"
     x = wsd_eventing__operations.wsd_subscribe(hosted_scan_service, event_uri, notify_addr, expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service,
@@ -177,10 +159,7 @@ def wsd_job_end_state_subscribe(hosted_scan_service,
                                                notify_addr,
                                                expiration)
 
-    if x is False:
-        return False
-    else:
-        return wsd_common.xml_find(x, ".//wse:Identifier").text
+    return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 # TODO: handle this subscription with wsd_common.submit_request()
@@ -223,9 +202,6 @@ def wsd_scan_available_event_subscribe(hosted_scan_service,
     x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
                                   "ws-scan__scan_available_event_subscribe.xml",
                                   fields_map)
-
-    if x is False:
-        return False
 
     dest_token = wsd_common.xml_find(x, ".//sca:DestinationToken").text
     subscription_id = wsd_common.xml_find(x, ".//wse:Identifier").text

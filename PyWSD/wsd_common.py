@@ -82,7 +82,8 @@ def submit_request(addr, xml_template, fields_map):
     :param xml_template: the *name* of the template file to use as payload.\
     Should be of the form "prefix__some_words_for_description.xml"
     :param fields_map: the dictionary containing the values needed to fill the loaded XML template
-    :return:
+    :return: the full XML response message
+    :rtype: lxml.etree.ElementTree
     """
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
 
@@ -96,9 +97,7 @@ def submit_request(addr, xml_template, fields_map):
     try:
         r = requests.post(addr, headers=headers, data=data, timeout=5)
     except (requests.ReadTimeout, requests.ConnectTimeout):
-        return False
-        # TODO: throw a custom exception instead of returning recursively False values
-        # FIXME: actually not all calls to submit_requests can hendle properly the False return value
+        raise TimeoutError
 
     x = etree.fromstring(r.text)
     if debug:

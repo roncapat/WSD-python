@@ -86,10 +86,13 @@ def __demo():
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         print(a)
-        (ti, hss) = wsd_get(a)
-        print(ti)
-        for b in hss:
-            print(b)
+        try:
+            (ti, hss) = wsd_get(a)
+            print(ti)
+            for b in hss:
+                print(b)
+        except TimeoutError:
+            print("The target did not reply")
 
 
 if __name__ == "__main__":

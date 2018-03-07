@@ -48,7 +48,7 @@ def wsd_subscribe(hosted_service,
                                   "ws-eventing__subscribe.xml",
                                   fields_map)
 
-    if x is False or wsd_common.check_fault(x):
+    if wsd_common.check_fault(x):
         return False
 
     return wsd_common.xml_find(x, ".//wse:SubscribeResponse")
@@ -69,7 +69,7 @@ def wsd_unsubscribe(hosted_service, subscription_id):
                                   "ws-eventing__unsubscribe.xml",
                                   fields_map)
 
-    return False if x is False or wsd_common.check_fault(x) else True
+    return False if wsd_common.check_fault(x) else True
 
 
 def wsd_renew(hosted_service, subscription_id, expiration):
@@ -90,7 +90,7 @@ def wsd_renew(hosted_service, subscription_id, expiration):
                                   "ws-eventing__renew.xml",
                                   fields_map)
 
-    return False if x is False or wsd_common.check_fault(x) else True
+    return False if wsd_common.check_fault(x) else True
 
 
 def wsd_get_status(hosted_service, subscription_id):
@@ -110,7 +110,7 @@ def wsd_get_status(hosted_service, subscription_id):
                                   "ws-eventing__get_status.xml",
                                   fields_map)
 
-    if x is False or wsd_common.check_fault(x):
+    if wsd_common.check_fault(x):
         return False
     e = wsd_common.xml_find(x, ".//wse:Expires")
     return xml_helpers.parse_xml_datetime(e.text.replace(" ", ""), weak=True) if e is not None else None

@@ -274,7 +274,9 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
         print("%s %s %s" % (img.format, img.size, img.mode))
 
-        # TODO: support multi-page response
+        # TODO: support multi-page response, return images objects, do not write directly on files
+        # img.seek(n)
+        # img.tell()
 
         pathname = relpath + '/' + docname
         img.save(pathname, "BMP")

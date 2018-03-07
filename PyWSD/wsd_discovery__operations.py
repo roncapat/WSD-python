@@ -165,10 +165,11 @@ def get_devices(cache: bool = True,
         # Discard not-reachable targets
         c_ok = copy.deepcopy(c)
         for t in c:
-            if wsd_transfer__operations.wsd_get(t) is False:
-                cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', t.ep_ref_addr)
-            else:
+            try:
+                wsd_transfer__operations.wsd_get(t)
                 c_ok.add(t)
+            except TimeoutError:
+                cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', t.ep_ref_addr)
         db.commit()
 
         # Add discovered entries to DB
