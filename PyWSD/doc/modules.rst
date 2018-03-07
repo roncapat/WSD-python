@@ -1,50 +1,58 @@
 PyWSD package
 ===============
 
-wsd_common module
+Structures
 --------------------------
 
-.. automodule:: wsd_common
+wsd_discovery__structures module
+.................................
+
+.. automodule:: wsd_discovery__structures
     :members:
     :show-inheritance:
 
-wsd_structures module
-------------------------------
+wsd_transfer__structures module
+................................
 
-.. automodule:: wsd_structures
-    :members:
-
-wsd_discovery module
------------------------------
-
-.. automodule:: wsd_discovery
+.. automodule:: wsd_transfer__structures
     :members:
     :show-inheritance:
 
-wsd_transfer module
-----------------------------
+wsd_scan__structures module
+............................
 
-.. automodule:: wsd_transfer
+.. automodule:: wsd_scan__structures
     :members:
     :show-inheritance:
 
-wsd_print module
--------------------------
 
-.. automodule:: wsd_print
+Operations
+--------------------------
+
+wsd_discovery__operations module
+.................................
+
+.. automodule:: wsd_discovery__operations
     :members:
     :show-inheritance:
 
-wsd_scan_events module
---------------------------------
+wsd_transfer__operations module
+................................
 
-.. automodule:: wsd_scan_events
+.. automodule:: wsd_transfer__operations
     :members:
     :show-inheritance:
 
-wsd_scan_operations module
-------------------------------------
+wsd_eventing__operations module
+................................
 
-.. automodule:: wsd_scan_operations
+.. automodule:: wsd_eventing__operations
+    :members:
+    :show-inheritance:
+
+wsd_scan__operations module
+............................
+
+.. automodule:: wsd_scan__operations
     :members:
     :show-inheritance:

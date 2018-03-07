@@ -36,6 +36,7 @@ def gen_urn():
     return "urn:uuid:" + str(uuid.uuid4())
 
 
+# TODO: replace dumb text substitution with xml tree manipulation
 def message_from_file(fname, **kwargs):
     """
     Loads an XML template file, minifies it, and fills it with values passed in the kwargs map.

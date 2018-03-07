@@ -20,7 +20,8 @@ def fmt_as_xml_datetime(dt: datetime):
     return fmtstring
 
 
-def parse_xml_datetime(s: str, weak: bool = False):
+def parse_xml_datetime(s: str,
+                       weak: bool = False):
     pattern = r"""
         ^
         (?P<year>\d{4})

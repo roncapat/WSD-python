@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 import email
+import typing
 from io import BytesIO
 
 import lxml.etree as etree
@@ -11,16 +12,19 @@ from PIL import Image
 import wsd_common
 import wsd_discovery__operations
 import wsd_scan__parsers
+import wsd_scan__structures
 import wsd_transfer__operations
+import wsd_transfer__structures
 
 
-def wsd_get_scanner_elements(hosted_scan_service):
+def wsd_get_scanner_elements(hosted_scan_service: wsd_transfer__structures.HostedService):
     """
     Submit a GetScannerElements request, and parse the response.
     The device should reply with informations about itself,
     its configuration, its status and the defalt scan ticket
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a tuple of the form (ScannerDescription, ScannerConfiguration, ScannerStatus, ScanTicket)
     """
     fields = {"FROM": wsd_common.urn,
@@ -43,14 +47,18 @@ def wsd_get_scanner_elements(hosted_scan_service):
     return description, config, status, std_ticket
 
 
-def wsd_validate_scan_ticket(hosted_scan_service, tkt):
+def wsd_validate_scan_ticket(hosted_scan_service: wsd_transfer__structures.HostedService,
+                             tkt: wsd_scan__structures.ScanTicket) \
+        -> typing.Tuple[bool, wsd_scan__structures.ScanTicket]:
     """
     Submit a ValidateScanTicket request, and parse the response.
     Scanner devices can validate scan settings/parameters and fix errors if any. It is recommended to always
     validate a ticket before submitting the actual scan job.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :param tkt: the ScanTicket to submit for validation purposes
+    :type tkt: wsd_scan__structures.ScanTicket
     :return: a tuple of the form (boolean, ScanTicket), where the first field is True if no errors were found during\
     validation, along with the same ticket submitted, or False if errors were found, along with a corrected ticket.
     """
@@ -69,16 +77,25 @@ def wsd_validate_scan_ticket(hosted_scan_service, tkt):
         return False, wsd_scan__parsers.parse_scan_ticket(wsd_common.xml_find(x, ".//sca::ValidScanTicket"))
 
 
-def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token=""):
+def wsd_create_scan_job(hosted_scan_service: wsd_transfer__structures.HostedService,
+                        tkt: wsd_scan__structures.ScanTicket,
+                        scan_identifier: str = "",
+                        dest_token: str = "") \
+        -> wsd_scan__structures.ScanJob:
     """
     Submit a CreateScanJob request, and parse the response.
     This creates a scan job and starts the image(s) acquisition.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :param tkt: the ScanTicket to submit for validation purposes
+    :type tkt: wsd_scan__structures.ScanTicket
     :param scan_identifier: a string identifying the device-initiated scan to handle, if any
+    :type scan_identifier: str
     :param dest_token: a token assigned by the scanner to this client, needed for device-initiated scans
+    :type dest_token: str
     :return: a ScanJob instance
+    :rtype: wsd_scan__structures.ScanJob
     """
 
     fields = {"FROM": wsd_common.urn,
@@ -94,14 +111,19 @@ def wsd_create_scan_job(hosted_scan_service, tkt, scan_identifier="", dest_token
     return wsd_scan__parsers.parse_scan_job(x)
 
 
-def wsd_cancel_job(hosted_scan_service, job):
+def wsd_cancel_job(hosted_scan_service: wsd_transfer__structures.HostedService,
+                   job: wsd_scan__structures.ScanJob) \
+        -> bool:
     """
     Submit a CancelJob request, and parse the response.
     Stops and aborts the specified scan job.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :param job: the ScanJob instance representing the job to abort
+    :type job: wsd_scan_structures.ScanJob
     :return: True if the job is found and then aborted, False if the specified job do not exists or already ended.
+    :rtype: bool
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
@@ -114,14 +136,17 @@ def wsd_cancel_job(hosted_scan_service, job):
     return x is None
 
 
-def wsd_get_job_elements(hosted_scan_service, job):
+def wsd_get_job_elements(hosted_scan_service: wsd_transfer__structures.HostedService,
+                         job: wsd_scan__structures.ScanJob):
     """
     Submit a GetJob request, and parse the response.
     The device should reply with info's about the specified job, such as its status,
     the ticket submitted for job initiation, the final parameters set effectively used to scan, and a document list.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :param job: the ScanJob instance representing the job to abort
+    :type job: wsd_scan_structures.ScanJob
     :return: a tuple of the form (JobStatus, ScanTicket, DocumentParams, doclist),\
     where doclist is a list of document names
     """
@@ -145,13 +170,16 @@ def wsd_get_job_elements(hosted_scan_service, job):
     return jstatus, tkt, dps, dlist
 
 
-def wsd_get_active_jobs(hosted_scan_service):
+def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedService) \
+        -> typing.List[wsd_scan__structures.ScanJob]:
     """
     Submit a GetActiveJobs request, and parse the response.
     The device should reply with a list of all active scan jobs.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a list of JobStatus elements
+    :rtype: typing.List[wsd_scan__structures.ScanJob]
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
@@ -166,13 +194,15 @@ def wsd_get_active_jobs(hosted_scan_service):
     return jsl
 
 
-def wsd_get_job_history(hosted_scan_service):
+def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedService) \
+        -> typing.List[wsd_scan__structures.JobStatus]:
     """
     Submit a GetJobHistory request, and parse the response.
     The device should reply with a list of recently ended jobs.
     Note that some device implementations do not keep or share job history through WSD.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a list of JobStatus elements.
     """
     fields = {"FROM": wsd_common.urn,
@@ -188,7 +218,11 @@ def wsd_get_job_history(hosted_scan_service):
     return jsl
 
 
-def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
+def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedService,
+                       job: wsd_scan__structures.ScanJob,
+                       docname: str,
+                       relpath: str = '.') \
+        -> int:
     """
     Submit a RetrieveImage request, and parse the response.
     Retrieves a single image from the scanner, if the job has available images to send. If the file format
@@ -196,10 +230,15 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
     Usually the client has approx. 60 seconds to start images acquisition after the creation of a job.
 
     :param hosted_scan_service: the wsd scan service to query
+    :type hosted_scan_service: wsd_transfer__structures.HostedService
     :param job: the ScanJob instance representing the queried job.
+    :type job: wsd_scan__structures.ScanJob
     :param docname: the name assigned to the image to retrieve.
+    :type docname: str
     :param relpath: the relative path of the file to write the image to.
+    :type relpath: str
     :return: the number of images retrieved
+    :rtype: int
     """
 
     data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),

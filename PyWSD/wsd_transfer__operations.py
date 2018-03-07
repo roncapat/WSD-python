@@ -3,14 +3,16 @@
 
 import wsd_common
 import wsd_discovery__operations
+import wsd_discovery__structures
 import wsd_transfer__structures
 
 
-def wsd_get(target_service):
+def wsd_get(target_service: wsd_discovery__structures.TargetService):
     """
     Query wsd target for information about model/device and hosted services.
 
     :param target_service: A wsd target
+    :type target_service: wsd_discovery__structures.TargetService
     :return: A tuple containing a TargetInfo and a list of HostedService instances.
     """
     fields = {"FROM": wsd_common.urn,
