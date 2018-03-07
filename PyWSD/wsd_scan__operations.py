@@ -191,15 +191,15 @@ def wsd_get_job_history(hosted_scan_service):
 def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
     """
     Submit a RetrieveImage request, and parse the response.
-    Retrieves a single image from the scanner, if the job has available images to send.
+    Retrieves a single image from the scanner, if the job has available images to send. If the file format
+    selected in the scan ticket was multipage, retrieves a batch of images instead.
     Usually the client has approx. 60 seconds to start images acquisition after the creation of a job.
-    For multiple sheets scans, user should submit this request in a loop until False is returned.
 
     :param hosted_scan_service: the wsd scan service to query
     :param job: the ScanJob instance representing the queried job.
     :param docname: the name assigned to the image to retrieve.
     :param relpath: the relative path of the file to write the image to.
-    :return: True if image is available, False otherwise
+    :return: the number of images retrieved
     """
 
     data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),
@@ -222,7 +222,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
         if q is not None:
             e = wsd_common.xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
             if e == "wscn:ClientErrorNoImagesAvailable":
-                return False
+                return 0
     except etree.ParseError:
         content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
         m = email.message_from_bytes(content_with_header)
@@ -240,9 +240,7 @@ def wsd_retrieve_image(hosted_scan_service, job, docname, relpath='.'):
         pathname = relpath + '/' + docname
         img.save(pathname, "BMP")
 
-        # TODO: do not wait for exception, use ticket imagestotransfer value instead for loop ending
-        # return bitmaps maybe
-        return True
+        return 1
 
 
 def __demo():
@@ -279,8 +277,8 @@ def __demo():
                     for i in jobs:
                         print(i)
                     o = 0
-                    while wsd_retrieve_image(b, j, "test_%d.jpeg" % o):
-                        o = o + 1
+                    while o < ticket.doc_params.images_num:
+                        o += wsd_retrieve_image(b, j, "test_%d.jpeg" % o)
 
 
 if __name__ == "__main__":
