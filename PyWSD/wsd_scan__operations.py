@@ -171,15 +171,15 @@ def wsd_get_job_elements(hosted_scan_service: wsd_transfer__structures.HostedSer
 
 
 def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedService) \
-        -> typing.List[wsd_scan__structures.ScanJob]:
+        -> typing.List[wsd_scan__structures.JobSummary]:
     """
     Submit a GetActiveJobs request, and parse the response.
     The device should reply with a list of all active scan jobs.
 
     :param hosted_scan_service: the wsd scan service to query
     :type hosted_scan_service: wsd_transfer__structures.HostedService
-    :return: a list of JobStatus elements
-    :rtype: typing.List[wsd_scan__structures.ScanJob]
+    :return: a list of JobSummary elements
+    :rtype: typing.List[wsd_scan__structures.JobSummary]
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
@@ -195,7 +195,7 @@ def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedServ
 
 
 def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedService) \
-        -> typing.List[wsd_scan__structures.JobStatus]:
+        -> typing.List[wsd_scan__structures.JobSummary]:
     """
     Submit a GetJobHistory request, and parse the response.
     The device should reply with a list of recently ended jobs.
@@ -203,7 +203,7 @@ def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedServ
 
     :param hosted_scan_service: the wsd scan service to query
     :type hosted_scan_service: wsd_transfer__structures.HostedService
-    :return: a list of JobStatus elements.
+    :return: a list of JobSummary elements.
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
