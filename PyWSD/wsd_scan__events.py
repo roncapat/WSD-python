@@ -459,16 +459,20 @@ def handle_scan_available_event(client_context, scan_identifier, file_name):
     :param file_name: the prefix name of the files to write.\
      Full name will be of the form "file_name_N.ext" where N is a progressive number,\
       and ext the extension of the file (by now, only .jpeg is supported)
-    :return: the number of pages scanned
     """
     host = host_map[client_context]
     dest_token = token_map[client_context]
     ticket = wsd_scan__operations.wsd_get_scanner_elements(host).std_ticket
     job = wsd_scan__operations.wsd_create_scan_job(host, ticket, scan_identifier, dest_token)
+
     o = 0
-    while wsd_scan__operations.wsd_retrieve_image(host, job, "%s_%d.jpeg" % (file_name, o)):
-        o = o + 1
-    return o
+    l = []
+    while o < ticket.doc_params.images_num:
+        imgnum, imglist = wsd_scan__operations.wsd_retrieve_image(host, job, file_name)
+        for i in imglist:
+            i.save("%s_%d.jpeg" % (file_name, o), "BMP")
+            o += 1
+        l += imglist
 
 
 def __demo_simple_listener():

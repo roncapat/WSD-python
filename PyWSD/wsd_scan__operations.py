@@ -7,7 +7,7 @@ from io import BytesIO
 
 import lxml.etree as etree
 import requests
-from PIL import Image
+from PIL import Image, ImageSequence
 
 import wsd_common
 import wsd_discovery__operations
@@ -220,9 +220,8 @@ def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedServ
 
 def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedService,
                        job: wsd_scan__structures.ScanJob,
-                       docname: str,
-                       relpath: str = '.') \
-        -> int:
+                       docname: str) \
+        -> typing.Tuple[int, typing.List(Image)]:
     """
     Submit a RetrieveImage request, and parse the response.
     Retrieves a single image from the scanner, if the job has available images to send. If the file format
@@ -235,10 +234,8 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
     :type job: wsd_scan__structures.ScanJob
     :param docname: the name assigned to the image to retrieve.
     :type docname: str
-    :param relpath: the relative path of the file to write the image to.
-    :type relpath: str
-    :return: the number of images retrieved
-    :rtype: int
+    :return: the number of images retrieved, and an array of images
+    :rtype: typing.Tuple[int, typing.List(PIL.Image)]
     """
 
     data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),
@@ -261,7 +258,7 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
         if q is not None:
             e = wsd_common.xml_find(q, ".//soap:Code/soap:Subcode/soap:Value").text
             if e == "wscn:ClientErrorNoImagesAvailable":
-                return 0
+                return 0, []
     except etree.ParseError:
         content_with_header = b'Content-type: ' + r.headers['Content-Type'].encode('ascii') + r.content
         m = email.message_from_bytes(content_with_header)
@@ -274,14 +271,16 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
         print("%s %s %s" % (img.format, img.size, img.mode))
 
-        # TODO: support multi-page response, return images objects, do not write directly on files
-        # img.seek(n)
-        # img.tell()
+        count = 0
+        imglist = []
 
-        pathname = relpath + '/' + docname
-        img.save(pathname, "BMP")
+        for page in ImageSequence.Iterator(img):
+            count += 1
+            a = Image.new(page.mode, page.size)
+            a.putdata(page.getdata())
+            imglist.append(a)
 
-        return 1
+        return count, imglist
 
 
 def __demo():
@@ -319,7 +318,10 @@ def __demo():
                         print(i)
                     o = 0
                     while o < ticket.doc_params.images_num:
-                        o += wsd_retrieve_image(b, j, "test_%d.jpeg" % o)
+                        imgnum, imglist = wsd_retrieve_image(b, j, "prova.bmp")
+                        for i in imglist:
+                            i.save("prova_%d.bmp" % o, "BMP")
+                            o += 1
 
 
 if __name__ == "__main__":
