@@ -221,7 +221,7 @@ def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedServ
 def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedService,
                        job: wsd_scan__structures.ScanJob,
                        docname: str) \
-        -> typing.Tuple[int, typing.List(Image)]:
+        -> typing.Tuple[int, typing.List[Image.Image]]:
     """
     Submit a RetrieveImage request, and parse the response.
     Retrieves a single image from the scanner, if the job has available images to send. If the file format

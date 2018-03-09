@@ -312,7 +312,6 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
 
 # TODO: implement multi-device simultaneous monitoring
-# TODO: implement subscription renewal (or no expiration at all during suscription)
 class WSDScannerMonitor:
     """
     A class that abstracts event handling and data querying for a device. Programmer should instantiate this class
@@ -449,16 +448,19 @@ class WSDScannerMonitor:
     # TODO: implement collection of jobs status
 
 
-def handle_scan_available_event(client_context, scan_identifier, file_name):
+def handle_scan_available_event(client_context: str,
+                                scan_identifier: str,
+                                file_name: str):
     """
     Reply to a ScanAvailable event by issuing the creation of a new scan job.
     Waits for job completion and writes the output to files.
 
     :param client_context: a string identifying a wsd host selection
+    :type client_context: str
     :param scan_identifier: a string identifying the specific scan task to handle
-    :param file_name: the prefix name of the files to write.\
-     Full name will be of the form "file_name_N.ext" where N is a progressive number,\
-      and ext the extension of the file (by now, only .jpeg is supported)
+    :type scan_identifier: str
+    :param file_name: the prefix name of the files to write.
+    :type file_name: str
     """
     host = host_map[client_context]
     dest_token = token_map[client_context]
@@ -485,13 +487,7 @@ def __demo_simple_listener():
     for b in hss:
         if "wscn:ScannerServiceType" in b.types:
             listen_addr = "http://192.168.1.109:6666/wsd"
-            # wsd_scanner_all_events_subscribe(b, listen_addr)
-            # wsd_scanner_elements_change_subscribe(b, listen_addr)
-            # wsd_scanner_status_summary_subscribe(b, listen_addr)
-            # wsd_scanner_status_condition_subscribe(b, listen_addr)
-            # wsd_scanner_status_condition_cleared_subscribe(b, listen_addr)
-            # wsd_job_status_subscribe(b, listen_addr)
-            # wsd_job_end_state_subscribe(b, listen_addr)
+            wsd_scanner_all_events_subscribe(b, listen_addr)
             (xxx, dest_token) = wsd_scan_available_event_subscribe(b,
                                                                    "PROVA_PYTHON",
                                                                    "python_client",
