@@ -8,7 +8,8 @@ https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=YRKMLJXGDD7
 # PyWSD
 Web Services for Devices (WSD) tools and utilities for cross platform support.
 
-**Documentation coming soon<sup>:tm:</sup>**
+## Documentation
+You can browse the documentation on [readthedocs.io](http://wsd-python.readthedocs.io/en/master/index.html).
 
 ## Abstract
 The Web Services for Devices is a set of specifications aimed to handle network 
