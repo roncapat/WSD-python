@@ -4,4 +4,4 @@ specs/*
 *.bmp
 .idea/*
 venv/*
-PyWSD/doc/_build
+docs/_build
