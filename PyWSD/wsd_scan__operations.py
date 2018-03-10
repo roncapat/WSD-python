@@ -179,7 +179,7 @@ def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedServ
     :param hosted_scan_service: the wsd scan service to query
     :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a list of JobSummary elements
-    :rtype: typing.List[wsd_scan__structures.JobSummary]
+    :rtype: list[wsd_scan__structures.JobSummary]
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
@@ -235,7 +235,7 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
     :param docname: the name assigned to the image to retrieve.
     :type docname: str
     :return: the number of images retrieved, and an array of images
-    :rtype: typing.Tuple[int, typing.List(PIL.Image)]
+    :rtype: (int, list[PIL.Image])
     """
 
     data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),

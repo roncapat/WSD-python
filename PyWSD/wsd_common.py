@@ -146,7 +146,7 @@ def xml_find(xml_tree: etree.ElementTree,
     :param query: the XPath query
     :type query: str
     :return: the searched etree if found, or None otherwise
-    :rtype: typing.Union[etree.ElementTree, None]
+    :rtype: etree.ElementTree | None
     """
     return xml_tree.find(query, NSMAP)
 
@@ -163,7 +163,7 @@ def xml_findall(xml_tree: etree.ElementTree,
     :param query: the XPath query
     :type query: str
     :return: a list of searched etrees if found, or None otherwise
-    :rtype: typing.Union[etree.ElementTree, None]
+    :rtype: etree.ElementTree | None
     """
 
     return xml_tree.findall(query, NSMAP)

@@ -24,7 +24,7 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
     :param notify_addr: The address to send notifications to.
     :type notify_addr: str
     :param expiration: Expiration time, as a datetime or timedelta object
-    :type expiration: typing.Union[datetime, timedelta]
+    :type expiration: datetime | timedelta
     :return: the xml SubscribeResponse of the wsd service\
              or False if a fault message is received instead
     """
@@ -91,7 +91,7 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
     :param subscription_id: the ID returned from a previous successful event subscription call
     :type subscription_id: str
     :param expiration: Expiration time, as a datetime or timedelta object
-    :type expiration: typing.Union[datetime, timedelta]
+    :type expiration: datetime | timedelta
     :return: False if a fault message is received instead, True otherwise
     """
 
