@@ -1,6 +1,7 @@
 specs/*
 *.pyc
 *.jpeg
+*.bmp
 .idea/*
 venv/*
 PyWSD/doc/_build
