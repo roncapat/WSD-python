@@ -9,12 +9,12 @@ import lxml.etree as etree
 import requests
 from PIL import Image, ImageSequence
 
-import wsd_common
-import wsd_discovery__operations
-import wsd_scan__parsers
-import wsd_scan__structures
-import wsd_transfer__operations
-import wsd_transfer__structures
+from PyWSD import wsd_common, \
+    wsd_discovery__operations, \
+    wsd_scan__parsers, \
+    wsd_scan__structures, \
+    wsd_transfer__operations, \
+    wsd_transfer__structures
 
 
 def wsd_get_scanner_elements(hosted_scan_service: wsd_transfer__structures.HostedService):

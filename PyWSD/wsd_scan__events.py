@@ -10,11 +10,11 @@ from datetime import datetime, timedelta
 
 import lxml.etree as etree
 
-import wsd_common
-import wsd_eventing__operations
-import wsd_scan__operations
-import wsd_scan__parsers
-import xml_helpers
+from PyWSD import wsd_common, \
+    wsd_eventing__operations, \
+    wsd_scan__operations, \
+    wsd_scan__parsers, \
+    xml_helpers
 
 token_map = {}
 host_map = {}

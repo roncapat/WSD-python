@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import wsd_common
-import wsd_discovery__operations
-import wsd_transfer__operations
+from PyWSD import wsd_common, \
+    wsd_discovery__operations, \
+    wsd_transfer__operations
 
 
 def wsd_get_printer_elements(hosted_print_service):

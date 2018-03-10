@@ -4,9 +4,9 @@
 import typing
 from datetime import datetime, timedelta
 
-import wsd_common
-import wsd_transfer__structures
-import xml_helpers
+from PyWSD import wsd_common, \
+    wsd_transfer__structures, \
+    xml_helpers
 
 
 def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import wsd_common
+from PyWSD import wsd_common
 
 
 class ScannerCondition:

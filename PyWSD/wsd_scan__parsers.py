@@ -3,8 +3,8 @@
 
 import copy
 
-import wsd_common
-import wsd_scan__structures
+from PyWSD import wsd_common, \
+    wsd_scan__structures
 
 
 # try to use declxml https://github.com/gatkin/declxml

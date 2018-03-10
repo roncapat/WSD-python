@@ -11,9 +11,9 @@ import struct
 import lxml.etree as etree
 
 # noinspection PyUnresolvedReferences
-import wsd_common
-import wsd_discovery__structures
-import wsd_transfer__operations
+from PyWSD import wsd_common, \
+    wsd_discovery__structures, \
+    wsd_transfer__operations
 
 multicast_group = ('239.255.255.250', 3702)
 

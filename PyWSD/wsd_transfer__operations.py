@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import wsd_common
-import wsd_discovery__operations
-import wsd_discovery__structures
-import wsd_transfer__structures
+from PyWSD import wsd_common, \
+    wsd_discovery__operations, \
+    wsd_discovery__structures, \
+    wsd_transfer__structures
 
 
 def wsd_get(target_service: wsd_discovery__structures.TargetService):
