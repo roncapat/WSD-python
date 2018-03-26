@@ -6,16 +6,14 @@
 Welcome to PyWSD's documentation!
 =================================
 
+PyWSD is a library for interacting with WSD-enabled devices in your network.
+WSD stands for Web Services for Devices, a set of technologies based on the exchange
+of XML messages between devices such as a PC and a network printer, but in fact the
+scope of application is theoretically broader than just printers and scanners: you could
+query a WSD-enabled thermometer, for example.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+         :caption: Reference:
 
    modules
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`

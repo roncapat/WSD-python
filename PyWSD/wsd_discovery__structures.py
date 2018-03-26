@@ -3,6 +3,11 @@
 
 
 class TargetService:
+    """
+    A WSD target service is an abstract entity that can be discovered on the network.
+    Each wsd device must not impersonate more than one target service, even if it
+    hosts multiple services like printing, scanning, etc.
+    """
     def __init__(self):
         self.ep_ref_addr = ""
         self.types = set()
