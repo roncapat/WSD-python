@@ -412,27 +412,50 @@ class WSDScannerMonitor:
             self.queues.sc_stat_sum_q.task_done()
         return self.status
 
+    def get_active_jobs(self):
+        while self.queues.job_status_q.empty() is not True:
+            status = self.queues.sc_cond_q.get()
+            if status.id not in self.active_jobs.keys():
+                self.active_jobs[status.id] = wsd_scan__operations.wsd_get_job_elements(self.service, status.id)
+            else:
+                self.active_jobs[status.id][0] = status
+            self.queues.job_status_q.task_done()
+        while self.queues.job_ended_q.empty() is not True:
+            summary = self.queues.sc_cond_q.get()
+            del self.active_jobs[summary.status.id]
+            self.job_history[summary.status.id] = summary
+            self.queues.job_ended_q.task_done()
+        return self.active_jobs
+
+    def get_job_history(self):
+        while self.queues.job_ended_q.empty() is not True:
+            summary = self.queues.sc_cond_q.get()
+            del self.active_jobs[summary.status.id]
+            self.job_history[summary.status.id] = summary
+            self.queues.job_ended_q.task_done()
+        return self.job_history
+
     def scanner_description_has_changed(self):
         """
-        Check if the scanner status has been updated since last get_scanner_status() call
+        Check if the scanner status has been updated since last get_scanner_description() call
 
-        :return: True if the scanner status has changed, False otherwise
+        :return: True if the scanner description has changed, False otherwise
         """
         return not self.queues.sc_cond_q.empty()
 
     def scanner_configuration_has_changed(self):
         """
-        Check if the scanner status has been updated since last get_scanner_status() call
+        Check if the scanner status has been updated since last get_scanner_configuration() call
 
-        :return: True if the scanner status has changed, False otherwise
+        :return: True if the scanner configuration has changed, False otherwise
         """
         return not self.queues.sc_conf_q.empty()
 
     def default_scan_ticket_has_changed(self):
         """
-        Check if the scanner status has been updated since last get_scanner_status() call
+        Check if the scanner status has been updated since last get_default_ticket() call
 
-        :return: True if the scanner status has changed, False otherwise
+        :return: True if the default scan ticket has changed, False otherwise
         """
         return not self.queues.sc_ticket_q.empty()
 
@@ -446,7 +469,14 @@ class WSDScannerMonitor:
                     and self.queues.sc_cond_clr_q.empty()
                     and self.queues.sc_stat_sum_q.empty())
 
-    # TODO: implement collection of jobs status
+    def job_status_has_changed(self):
+        """
+        Check if the status of some jobs has been updated since last get_job_status() call
+
+        :return: True if the status of some jobs has changed, False otherwise
+        """
+        return not (self.queues.job_status_q.empty()
+                    and self.queues.job_ended_q.empty())
 
 
 def handle_scan_available_event(client_context: str,
