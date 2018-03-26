@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import copy
 import os
 import pickle
 import socket
 import sqlite3
 import struct
+import typing
 
 import lxml.etree as etree
 
-# noinspection PyUnresolvedReferences
 from PyWSD import wsd_common, \
     wsd_discovery__structures, \
     wsd_transfer__operations
@@ -66,7 +65,7 @@ def read_soap_msg_from_socket(sock, target_service, operation_str):
 
 
 def wsd_probe(probe_timeout: int = 3,
-              type_filter: str = None):
+              type_filter: typing.Set[str] = None):
     """
     Send a multicast discovery probe message, and wait for wsd-enabled devices to respond.
 
@@ -75,7 +74,7 @@ def wsd_probe(probe_timeout: int = 3,
     :return: a list of wsd targets
     """
 
-    opt_types = "" if type_filter is None else "<d:Types>%s</d:Types>" % type_filter
+    opt_types = "" if type_filter is None else "<d:Types>%s</d:Types>" % ' '.join(type_filter)
 
     fields = {"FROM": wsd_common.urn,
               "OPT_TYPES": opt_types}
@@ -122,19 +121,24 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService):
 def get_devices(cache: bool = True,
                 discovery: bool = True,
                 probe_timeout: int = 3,
-                type_filter: str = None):
+                type_filter: typing.Set[str] = None) \
+        -> typing.Set[wsd_discovery__structures.TargetService]:
     """
     Get a list of available wsd-enabled devices
 
     :param cache: True if you want to use the database pointed by *WSD_CACHE_PATH* env variable \
     as a way to know about already discovered devices or not.
+    :type cache: bool
     :param discovery: True if you want to rely on multicast probe for device discovery.
+    :type discovery: bool
     :param probe_timeout: the amount of seconds to wait for a probe response
-    :param type_filter: a string of space-separated device types
+    :type probe_timeout: int
+    :param type_filter: a set of device types (as strings)
+    :type type_filter: set[str]
     :return: a list of wsd targets as TargetService instances
+    :rtype: set[TargetService]
     """
     d_resolved = set()
-    c = set()
     c_ok = set()
 
     if discovery is True:
@@ -143,7 +147,6 @@ def get_devices(cache: bool = True,
         for t in d:
             d_resolved.add(wsd_resolve(t))
 
-    # TODO: return only entries that match the type_filter
     if cache is True:
         # Open the DB, if exists, or create a new one
         p = os.environ.get("WSD_CACHE_PATH", "")
@@ -158,12 +161,12 @@ def get_devices(cache: bool = True,
         db.commit()
 
         # Read entries from DB
+        c = set()
         cursor.execute('SELECT DISTINCT EpRefAddr, SerializedTarget FROM WsdCache')
         for row in cursor:
             c.add(pickle.loads(row[1].encode()))
 
         # Discard not-reachable targets
-        c_ok = copy.deepcopy(c)
         for t in c:
             try:
                 wsd_transfer__operations.wsd_get(t)
@@ -180,13 +183,17 @@ def get_devices(cache: bool = True,
 
         db.close()
 
-    return set.union(c_ok, d_resolved)
+    result = set()
+    for elem in set.union(c_ok, d_resolved):
+        if not elem.types.isdisjoint(type_filter):
+            result.add(elem)
+    return result
 
 
 def __demo():
     wsd_common.init()
     wsd_common.debug = True
-    tsl = get_devices(probe_timeout=3, type_filter="wscn:ScanDeviceType")
+    tsl = get_devices(probe_timeout=3, type_filter={"wscn:ScanDeviceType"})
     for a in tsl:
         print(a)
 

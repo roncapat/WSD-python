@@ -166,7 +166,7 @@ def wsd_job_end_state_subscribe(hosted_scan_service: wsd_transfer__structures.Ho
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
-# TODO: handle this subscription with wsd_common.submit_request()
+# TODO: handle this subscription with wsd_eventing__operations.wsd_subscribe()
 def wsd_scan_available_event_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
                                        display_str,
                                        context_str,
