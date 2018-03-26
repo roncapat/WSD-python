@@ -4,6 +4,7 @@ setup(
     name='WSD-python',
     version='0.1',
     packages=['PyWSD'],
+    python_requires='>=3.5',
     install_requires=["argparse", "uuid", "lxml", "requests", "Pillow", "python-dateutil", "sphinx_rtd_theme"],
     url='https://github.com/roncapat/WSD-python',
     license='GPL v3.0',
