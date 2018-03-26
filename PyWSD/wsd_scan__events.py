@@ -208,6 +208,18 @@ def wsd_scan_available_event_subscribe(hosted_scan_service,
     return subscription_id, dest_token
 
 
+class QueuesSet:
+    def __init__(self):
+        self.sc_descr_q = queue.Queue()
+        self.sc_conf_q = queue.Queue()
+        self.sc_ticket_q = queue.Queue()
+        self.sc_stat_sum_q = queue.Queue()
+        self.sc_cond_q = queue.Queue()
+        self.sc_cond_clr_q = queue.Queue()
+        self.job_status_q = queue.Queue()
+        self.job_ended_q = queue.Queue()
+
+
 class HTTPServerWithContext(http.server.HTTPServer):
     def __init__(self, server_address, request_handler_class, context, *args, **kw):
         super().__init__(server_address, request_handler_class, *args, **kw)
@@ -233,82 +245,113 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
         x = etree.fromstring(message)
         action = wsd_common.xml_find(x, ".//wsa:Action").text
-        if action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScanAvailableEvent' \
+        (prefix, _, action) = action.rpartition('/')
+        if prefix != 'http://schemas.microsoft.com/windows/2006/08/wdp/scan':
+            return
+        if action == 'ScanAvailableEvent' \
                 and context["allow_device_initiated_scans"] is True:
-            if wsd_common.debug is True:
-                print('##\n## SCAN AVAILABLE EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
-            client_context = wsd_common.xml_find(x, ".//sca:ClientContext").text
-            scan_identifier = wsd_common.xml_find(x, ".//sca:ScanIdentifier").text
-            t = threading.Thread(target=handle_scan_available_event,
-                                 args=(client_context,
-                                       scan_identifier,
-                                       "wsd-daemon-scan"))
-            t.start()
+            self.handle_scan_available_event(x)
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerElementsChangeEvent':
-            if wsd_common.debug is True:
-                print('##\n## SCANNER ELEMENTS CHANGE EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+        elif action == 'ScannerElementsChangeEvent':
+            self.handle_scanner_elements_change_event(context['queues'], x)
 
-            sca_config = wsd_common.xml_find(x, ".//sca:ScannerConfiguration")
-            sca_descr = wsd_common.xml_find(x, ".//sca:ScannerDescription")
-            std_ticket = wsd_common.xml_find(x, ".//sca:DefaultScanTicket")
+        elif action == 'ScannerStatusSummaryEvent':
+            self.handle_scanner_status_summary_event(context['queues'], x)
 
-            description = wsd_scan__parsers.parse_scan_description(sca_descr)
-            configuration = wsd_scan__parsers.parse_scan_configuration(sca_config)
-            std_ticket = wsd_scan__parsers.parse_scan_ticket(std_ticket)
+        elif action == 'ScannerStatusConditionEvent':
+            self.handle_scanner_status_condition_event(context['queues'], x)
 
-            context["queues"].sc_descr_q.put(description)
-            context["queues"].sc_conf_q.put(configuration)
-            context["queues"].sc_ticket_q.put(std_ticket)
+        elif action == 'ScannerStatusConditionClearedEvent':
+            self.handle_scanner_status_condition_cleared_event(context['queues'], x)
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusSummaryEvent':
-            if wsd_common.debug is True:
-                print('##\n## SCANNER STATUS SUMMARY EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+        elif action == 'JobStatusEvent':
+            self.handle_job_status_event(context['queues'], x)
 
-            state = wsd_common.xml_find(x, ".//sca:ScannerState").text
-            reasons = []
-            q = wsd_common.xml_find(x, ".//sca:ScannerStateReasons")
-            if q is not None:
-                dsr = wsd_common.xml_findall(q, ".//sca:ScannerStateReason")
-                for sr in dsr:
-                    reasons.append(sr.text)
-            context["queues"].sc_stat_sum_q.put((state, reasons))
+        elif action == 'JobEndStateEvent':
+            self.handle_job_end_state_event(context['queues'], x)
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionEvent':
-            if wsd_common.debug is True:
-                print('##\n## SCANNER STATUS CONDITION EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+    @staticmethod
+    def handle_scan_available_event(x):
+        if wsd_common.debug is True:
+            print('##\n## SCAN AVAILABLE EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+        client_context = wsd_common.xml_find(x, ".//sca:ClientContext").text
+        scan_identifier = wsd_common.xml_find(x, ".//sca:ScanIdentifier").text
+        t = threading.Thread(target=device_initiated_scan_worker,
+                             args=(client_context,
+                                   scan_identifier,
+                                   "wsd-daemon-scan"))
+        t.start()
 
-            cond = wsd_common.xml_find(x, ".//sca:DeviceCondition")
-            cond = wsd_scan__parsers.parse_scanner_condition(cond)
-            context["queues"].sc_cond_q.put(cond)
+    @staticmethod
+    def handle_scanner_elements_change_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## SCANNER ELEMENTS CHANGE EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/ScannerStatusConditionClearedEvent':
-            if wsd_common.debug is True:
-                print('##\n## SCANNER STATUS CONDITION CLEARED EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+        sca_config = wsd_common.xml_find(x, ".//sca:ScannerConfiguration")
+        sca_descr = wsd_common.xml_find(x, ".//sca:ScannerDescription")
+        std_ticket = wsd_common.xml_find(x, ".//sca:DefaultScanTicket")
 
-            cond = wsd_common.xml_find(x, ".//sca:DeviceConditionCleared")
-            cond_id = int(wsd_common.xml_find(cond, ".//sca:ConditionId").text)
-            clear_time = wsd_common.xml_find(cond, ".//sca:ConditionClearTime").text
-            context["queues"].sc_cond_clr_q.put((cond_id, clear_time))
+        description = wsd_scan__parsers.parse_scan_description(sca_descr)
+        configuration = wsd_scan__parsers.parse_scan_configuration(sca_config)
+        std_ticket = wsd_scan__parsers.parse_scan_ticket(std_ticket)
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobStatusEvent':
-            if wsd_common.debug is True:
-                print('##\n## JOB STATUS EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
-                s = wsd_common.xml_find(x, ".//sca:JobStatus")
-                context["queues"].sc_job_status_q.put(wsd_scan__parsers.parse_job_status(s))
+        queues.sc_descr_q.put(description)
+        queues.sc_conf_q.put(configuration)
+        queues.sc_ticket_q.put(std_ticket)
 
-        elif action == 'http://schemas.microsoft.com/windows/2006/08/wdp/scan/JobEndStateEvent':
-            if wsd_common.debug is True:
-                print('##\n## JOB END STATE EVENT\n##\n')
-                print(etree.tostring(x, pretty_print=True, xml_declaration=True))
-                s = wsd_common.xml_find(x, ".//sca:JobEndState")
-                context["queues"].sc_job_ended_q.put(wsd_scan__parsers.parse_job_summary(s))
+    @staticmethod
+    def handle_scanner_status_summary_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## SCANNER STATUS SUMMARY EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+        state = wsd_common.xml_find(x, ".//sca:ScannerState").text
+        reasons = []
+        q = wsd_common.xml_find(x, ".//sca:ScannerStateReasons")
+        if q is not None:
+            dsr = wsd_common.xml_findall(q, ".//sca:ScannerStateReason")
+            for sr in dsr:
+                reasons.append(sr.text)
+        queues.sc_stat_sum_q.put((state, reasons))
+
+    @staticmethod
+    def handle_scanner_status_condition_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## SCANNER STATUS CONDITION EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+        cond = wsd_common.xml_find(x, ".//sca:DeviceCondition")
+        cond = wsd_scan__parsers.parse_scanner_condition(cond)
+        queues.sc_cond_q.put(cond)
+
+    @staticmethod
+    def handle_scanner_status_condition_cleared_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## SCANNER STATUS CONDITION CLEARED EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+
+        cond = wsd_common.xml_find(x, ".//sca:DeviceConditionCleared")
+        cond_id = int(wsd_common.xml_find(cond, ".//sca:ConditionId").text)
+        clear_time = wsd_common.xml_find(cond, ".//sca:ConditionClearTime").text
+        queues.sc_cond_clr_q.put((cond_id, clear_time))
+
+    @staticmethod
+    def handle_job_status_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## JOB STATUS EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+            s = wsd_common.xml_find(x, ".//sca:JobStatus")
+            queues.sc_job_status_q.put(wsd_scan__parsers.parse_job_status(s))
+
+    @staticmethod
+    def handle_job_end_state_event(queues, x):
+        if wsd_common.debug is True:
+            print('##\n## JOB END STATE EVENT\n##\n')
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True))
+            s = wsd_common.xml_find(x, ".//sca:JobEndState")
+            queues.sc_job_ended_q.put(wsd_scan__parsers.parse_job_summary(s))
 
 
 # TODO: implement multi-device simultaneous monitoring
@@ -333,17 +376,6 @@ class WSDScannerMonitor:
             self.job_history[ej.status.id] = ej
 
         self.subscription_id = wsd_scanner_all_events_subscribe(service, listen_addr)
-
-        class QueuesSet:
-            def __init__(self):
-                self.sc_descr_q = queue.Queue()
-                self.sc_conf_q = queue.Queue()
-                self.sc_ticket_q = queue.Queue()
-                self.sc_stat_sum_q = queue.Queue()
-                self.sc_cond_q = queue.Queue()
-                self.sc_cond_clr_q = queue.Queue()
-                self.job_status_q = queue.Queue()
-                self.job_ended_q = queue.Queue()
 
         self.queues = QueuesSet()
 
@@ -479,9 +511,9 @@ class WSDScannerMonitor:
                     and self.queues.job_ended_q.empty())
 
 
-def handle_scan_available_event(client_context: str,
-                                scan_identifier: str,
-                                file_name: str):
+def device_initiated_scan_worker(client_context: str,
+                                 scan_identifier: str,
+                                 file_name: str):
     """
     Reply to a ScanAvailable event by issuing the creation of a new scan job.
     Waits for job completion and writes the output to files.
@@ -499,13 +531,13 @@ def handle_scan_available_event(client_context: str,
     job = wsd_scan__operations.wsd_create_scan_job(host, ticket, scan_identifier, dest_token)
 
     o = 0
-    l = []
+    images = []
     while o < ticket.doc_params.images_num:
         imgnum, imglist = wsd_scan__operations.wsd_retrieve_image(host, job, file_name)
         for i in imglist:
             i.save("%s_%d.jpeg" % (file_name, o), "BMP")
             o += 1
-        l += imglist
+        images += imglist
 
 
 def __demo_simple_listener():
