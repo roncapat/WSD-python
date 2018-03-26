@@ -355,7 +355,8 @@ class WSDScannerMonitor:
         self.listener.start()
 
     def close(self):
-        # self.server.shutdown()  FIXME is it the right way to stop the thread?
+        self.server.shutdown()
+        self.listener.join()
         wsd_eventing__operations.wsd_unsubscribe(self.service, self.subscription_id)
 
     def get_scanner_description(self):
