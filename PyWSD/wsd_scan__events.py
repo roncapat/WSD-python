@@ -22,8 +22,9 @@ host_map = {}
 
 
 def wsd_scanner_all_events_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                     notify_addr,
-                                     expiration: typing.Union[datetime, timedelta] = None):
+                                     notify_addr: str,
+                                     expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to ScannerElementsChange events.
 
@@ -43,12 +44,15 @@ def wsd_scanner_all_events_subscribe(hosted_scan_service: wsd_transfer__structur
                                                notify_addr,
                                                expiration)
 
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_elements_change_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                          notify_addr,
-                                          expiration: typing.Union[datetime, timedelta] = None):
+                                          notify_addr: str,
+                                          expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to ScannerElementsChange events.
 
@@ -63,12 +67,15 @@ def wsd_scanner_elements_change_subscribe(hosted_scan_service: wsd_transfer__str
                                                notify_addr,
                                                expiration)
 
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_summary_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                         notify_addr,
-                                         expiration: typing.Union[datetime, timedelta] = None):
+                                         notify_addr: str,
+                                         expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to ScannerStatusSummary events.
 
@@ -82,13 +89,15 @@ def wsd_scanner_status_summary_subscribe(hosted_scan_service: wsd_transfer__stru
                                                event_uri,
                                                notify_addr,
                                                expiration)
-
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                           notify_addr,
-                                           expiration: typing.Union[datetime, timedelta] = None):
+                                           notify_addr: str,
+                                           expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to ScannerStatusCondition events.
 
@@ -102,13 +111,15 @@ def wsd_scanner_status_condition_subscribe(hosted_scan_service: wsd_transfer__st
                                                event_uri,
                                                notify_addr,
                                                expiration)
-
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                                   notify_addr,
-                                                   expiration: typing.Union[datetime, timedelta] = None):
+                                                   notify_addr: str,
+                                                   expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to ScannerStatusConditionCleared events.
 
@@ -122,13 +133,15 @@ def wsd_scanner_status_condition_cleared_subscribe(hosted_scan_service: wsd_tran
                                                event_uri,
                                                notify_addr,
                                                expiration)
-
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_status_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                             notify_addr,
-                             expiration: typing.Union[datetime, timedelta] = None):
+                             notify_addr: str,
+                             expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to JobStatus events.
 
@@ -142,13 +155,15 @@ def wsd_job_status_subscribe(hosted_scan_service: wsd_transfer__structures.Hoste
                                                event_uri,
                                                notify_addr,
                                                expiration)
-
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 def wsd_job_end_state_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                notify_addr,
-                                expiration: typing.Union[datetime, timedelta] = None):
+                                notify_addr: str,
+                                expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union[False, str]:
     """
         Subscribe to JobEndState events.
 
@@ -162,15 +177,16 @@ def wsd_job_end_state_subscribe(hosted_scan_service: wsd_transfer__structures.Ho
                                                event_uri,
                                                notify_addr,
                                                expiration)
-
+    if x is False:
+        return False
     return wsd_common.xml_find(x, ".//wse:Identifier").text
 
 
 # TODO: handle this subscription with wsd_eventing__operations.wsd_subscribe()
 def wsd_scan_available_event_subscribe(hosted_scan_service: wsd_transfer__structures.HostedService,
-                                       display_str,
-                                       context_str,
-                                       notify_addr,
+                                       display_str: str,
+                                       context_str: str,
+                                       notify_addr: str,
                                        expiration: typing.Union[datetime, timedelta] = None):
     """
         Subscribe to ScanAvailable events.
@@ -203,13 +219,15 @@ def wsd_scan_available_event_subscribe(hosted_scan_service: wsd_transfer__struct
                   "OPT_EXPIRATION": expiration_tag,
                   "DISPLAY_STR": display_str,
                   "CONTEXT": context_str}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
-                                  "ws-scan__scan_available_event_subscribe.xml",
-                                  fields_map)
-
-    dest_token = wsd_common.xml_find(x, ".//sca:DestinationToken").text
-    subscription_id = wsd_common.xml_find(x, ".//wse:Identifier").text
-    return subscription_id, dest_token
+    try:
+        x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+                                      "ws-scan__scan_available_event_subscribe.xml",
+                                      fields_map)
+        dest_token = wsd_common.xml_find(x, ".//sca:DestinationToken").text
+        subscription_id = wsd_common.xml_find(x, ".//wse:Identifier").text
+        return subscription_id, dest_token
+    except TimeoutError:
+        return False
 
 
 class QueuesSet:

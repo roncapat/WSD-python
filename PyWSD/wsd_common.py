@@ -28,24 +28,28 @@ urn = ""
 parser = etree.XMLParser(remove_blank_text=True)
 
 
-def gen_urn():
+def gen_urn() -> str:
     """
     Generate a URN. It can be used as device id and/or message id
 
     :return: a string of the form "urn:uuid:*************************"
+    :rtype: str
     """
     return "urn:uuid:" + str(uuid.uuid4())
 
 
 # TODO: replace dumb text substitution with xml tree manipulation
-def message_from_file(fname, **kwargs):
+def message_from_file(fname: str,
+                      **kwargs) \
+        -> str:
     """
     Loads an XML template file, minifies it, and fills it with values passed in the kwargs map.
 
     :param fname: the path of the file to load
+    :type fname: str
     :param kwargs: the dictionary containing the values needed to fill the loaded XML template
-
     :return: a string representation of the processed xml file
+    :rtype: str
     """
     req = ''.join([l.strip() + ' ' for l in open(fname).readlines()]) \
         .replace('\n', '') \
@@ -64,25 +68,38 @@ def parse_cmd_line():
     return args.D, args.T
 
 
-def indent(text):
+def indent(text: str) -> str:
+    """
+    Indent (multiline) text with tabs
+    :param text: the text to indent
+    :type text: str
+    :return: the indented text
+    :rtype: str
+    """
     s = ""
     for l in text.splitlines():
         s += "\t%s\n" % l
     return s
 
 
-def abs_path(relpath):
+def abs_path(relpath: str) -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))
 
 
-def submit_request(addr, xml_template, fields_map):
+def submit_request(addr: str,
+                   xml_template: str,
+                   fields_map: typing.Dict[str, str]) \
+        -> etree.ElementTree:
     """
     Send a wsd xml/soap request to the specified address, and wait for response.
 
     :param addr: the address of the wsd service
+    :type addr: str
     :param xml_template: the *name* of the template file to use as payload.\
     Should be of the form "prefix__some_words_for_description.xml"
+    :type xml_template: str
     :param fields_map: the dictionary containing the values needed to fill the loaded XML template
+    :type fields_map: {str: str}
     :return: the full XML response message
     :rtype: lxml.etree.ElementTree
     """
@@ -146,7 +163,7 @@ def xml_find(xml_tree: etree.ElementTree,
     :param query: the XPath query
     :type query: str
     :return: the searched etree if found, or None otherwise
-    :rtype: etree.ElementTree | None
+    :rtype: lxml.etree.ElementTree | None
     """
     return xml_tree.find(query, NSMAP)
 
@@ -163,12 +180,12 @@ def xml_findall(xml_tree: etree.ElementTree,
     :param query: the XPath query
     :type query: str
     :return: a list of searched etrees if found, or None otherwise
-    :rtype: etree.ElementTree | None
+    :rtype: lxml.etree.ElementTree | None
     """
 
     return xml_tree.findall(query, NSMAP)
 
 
-def init():
+def init() -> None:
     global urn
     urn = gen_urn()

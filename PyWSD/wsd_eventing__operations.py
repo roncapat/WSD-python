@@ -4,6 +4,8 @@
 import typing
 from datetime import datetime, timedelta
 
+import lxml.etree as etree
+
 from PyWSD import wsd_common, \
     wsd_transfer__structures, \
     xml_helpers
@@ -12,7 +14,8 @@ from PyWSD import wsd_common, \
 def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
                   event_uri: str,
                   notify_addr: str,
-                  expiration: typing.Union[datetime, timedelta] = None):
+                  expiration: typing.Union[datetime, timedelta] = None) \
+        -> typing.Union(etree.ElementTree, False):
     """
     Subscribe to a certain type of events of a wsd service
 
@@ -24,9 +27,10 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
     :param notify_addr: The address to send notifications to.
     :type notify_addr: str
     :param expiration: Expiration time, as a datetime or timedelta object
-    :type expiration: datetime | timedelta
+    :type expiration: datetime | timedelta | None
     :return: the xml SubscribeResponse of the wsd service\
              or False if a fault message is received instead
+    :rtype: lxml.etree.ElementTree | False
     """
 
     if expiration is None:
@@ -60,7 +64,8 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
 
 
 def wsd_unsubscribe(hosted_service: wsd_transfer__structures.HostedService,
-                    subscription_id: str):
+                    subscription_id: str) \
+        -> bool:
     """
     Unsubscribe from events notifications of a wsd service
 
@@ -69,6 +74,7 @@ def wsd_unsubscribe(hosted_service: wsd_transfer__structures.HostedService,
     :param subscription_id: the ID returned from a previous successful event subscription call
     :type subscription_id: str
     :return: False if a fault message is received instead, True otherwise
+    :rtype: bool
     """
     fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
@@ -82,7 +88,8 @@ def wsd_unsubscribe(hosted_service: wsd_transfer__structures.HostedService,
 
 def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
               subscription_id: str,
-              expiration):
+              expiration: typing.Union[datetime, timedelta] = None) \
+        -> bool:
     """
     Renew an events subscription of a wsd service
 
@@ -91,8 +98,9 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
     :param subscription_id: the ID returned from a previous successful event subscription call
     :type subscription_id: str
     :param expiration: Expiration time, as a datetime or timedelta object
-    :type expiration: datetime | timedelta
+    :type expiration: datetime | timedelta | None
     :return: False if a fault message is received instead, True otherwise
+    :rtype: bool
     """
 
     fields_map = {"FROM": wsd_common.urn,
@@ -107,7 +115,8 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
 
 
 def wsd_get_status(hosted_service: wsd_transfer__structures.HostedService,
-                   subscription_id: str):
+                   subscription_id: str) \
+        -> typing.Union[None, False, datetime]:
     """
     Get the status of an events subscription of a wsd service
 
@@ -118,6 +127,7 @@ def wsd_get_status(hosted_service: wsd_transfer__structures.HostedService,
     :return: False if a fault message is received instead, \
              none if the subscription has no expiration set, \
              the expiration date otherwise
+    :rtype: None | False | datetime
     """
     fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
