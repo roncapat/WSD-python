@@ -130,9 +130,9 @@ def parse_xml_duration(s: str):
             (?!$)
             ((?P<hours>\d+)H)?
             ((?P<minutes>\d+)M)?
-            ((?P<seconds>\d+
+            ((?P<seconds>\d+)
                 (?P<millis>\.\d+)?
-            )S)?
+            S)?
         )?
         $
     """
@@ -147,7 +147,7 @@ def parse_xml_duration(s: str):
     hours = int(q.group("hours")) if q.group("hours") is not None else 0
     minutes = int(q.group("minutes")) if q.group("minutes") is not None else 0
     seconds = int(q.group("seconds")) if q.group("seconds") is not None else 0
-    millis = float(q.group("millis")) if q.group("millis") is not None else 0
+    millis = int(float(q.group("millis")) * 1000) if q.group("millis") is not None else 0
 
     return timedelta(days=365 * years + 31 * months + days,
                      seconds=hours * 3600 + minutes * 60 + seconds,
