@@ -2,6 +2,7 @@
 # -*- encoding: utf-8 -*-
 
 import argparse
+import datetime
 import os
 import typing
 import uuid
@@ -24,6 +25,7 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
 headers = {'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
 debug = False
 urn = ""
+log_path = "../log"
 
 parser = etree.XMLParser(remove_blank_text=True)
 
@@ -110,6 +112,7 @@ def submit_request(addr: str,
     if debug:
         r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
+        log_xml(r)
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
     try:
@@ -120,6 +123,7 @@ def submit_request(addr: str,
     x = etree.fromstring(r.text)
     if debug:
         print('##\n## %s RESPONSE\n##\n' % op_name)
+        log_xml(x)
         print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
     return x
 
@@ -186,6 +190,14 @@ def xml_findall(xml_tree: etree.ElementTree,
     return xml_tree.findall(query, NSMAP)
 
 
+def log_xml(xml_tree: etree.ElementTree):
+    logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
+    logfile.write(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True).decode("ASCII"))
+
 def init() -> None:
     global urn
     urn = gen_urn()
+    try:
+        os.mkdir(log_path)
+    except FileExistsError:
+        pass

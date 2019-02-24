@@ -5,3 +5,4 @@ specs/*
 .idea/*
 venv/*
 docs/_build
+/log

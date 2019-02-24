@@ -47,6 +47,7 @@ def send_multicast_soap_msg(xml_template: str,
     if wsd_common.debug:
         r = etree.fromstring(message.encode("ASCII"), parser=wsd_common.parser)
         print('##\n## %s\n##\n' % op_name)
+        wsd_common.log_xml(r)
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
     sock.sendto(message.encode("UTF-8"), multicast_group)
     return sock
@@ -56,7 +57,7 @@ def send_multicast_soap_msg(xml_template: str,
 def read_discovery_multicast_reply(sock: socket.socket,
                                    target_service: wsd_discovery__structures.TargetService,
                                    operation: str) \
-        -> typing.Union[False, wsd_discovery__structures.TargetService]:
+        -> typing.Union[None, wsd_discovery__structures.TargetService]:
     """
     Waits for a reply from an endpoint, containing info about the target itself. Used to
     catch wsd_probe and wsd_resolve responses. Updates the target_service with data collected.
@@ -74,11 +75,12 @@ def read_discovery_multicast_reply(sock: socket.socket,
     except socket.timeout:
         if wsd_common.debug:
             print('##\n## TIMEOUT\n##\n')
-        return False
+        return None
     else:
         x = etree.fromstring(data)
         if wsd_common.debug:
             print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
+            wsd_common.log_xml(x)
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
         target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
@@ -121,7 +123,7 @@ def wsd_probe(probe_timeout: int = 3,
 
     while True:
         ts = read_discovery_multicast_reply(sock, wsd_discovery__structures.TargetService(), "PROBE")
-        if ts is False:
+        if not ts:
             break
         target_services_list.add(ts)
 
@@ -150,7 +152,7 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
 
     sock.close()
 
-    if ts is False:
+    if not ts:
         return target_service
     else:
         return ts
