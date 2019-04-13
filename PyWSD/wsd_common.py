@@ -117,7 +117,7 @@ def submit_request(addr: str,
 
     try:
         r = requests.post(addr, headers=headers, data=data, timeout=5)
-    except (requests.ReadTimeout, requests.ConnectTimeout):
+    except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError):
         raise TimeoutError
 
     x = etree.fromstring(r.text)

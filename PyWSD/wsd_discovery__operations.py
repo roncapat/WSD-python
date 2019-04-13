@@ -14,7 +14,14 @@ from PyWSD import wsd_common, \
     wsd_discovery__structures, \
     wsd_transfer__operations
 
+discovery_verbosity = 0
+
 multicast_group = ('239.255.255.250', 3702)
+
+db_path = os.environ.get("WSD_CACHE_PATH", "")
+if not db_path:
+    db_path = os.path.expanduser("~/.wsdcache.db")
+    os.environ["WSD_CACHE_PATH"] = db_path
 
 
 def send_multicast_soap_msg(xml_template: str,
@@ -97,6 +104,50 @@ def read_discovery_multicast_reply(sock: socket.socket,
     return target_service
 
 
+wsd_port_v4 = ('239.255.255.250', 3702)
+
+
+# wsd_port_v6 = ('FF02::C', 3702)
+
+# wsd_port_v4 = ('', 3702)
+# wsd_port_v6 = ('FF02::C', 3702)
+
+def listen_multicast_announcements() \
+        -> typing.Tuple[bool, wsd_discovery__structures.TargetService]:
+    """
+
+    """
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(wsd_port_v4)
+    mreq = socket.inet_aton(wsd_port_v4[0]) + socket.inet_aton("0.0.0.0")
+    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+    try:
+        data, server = sock.recvfrom(4096)
+    except socket.timeout:
+        if wsd_common.debug:
+            print('##\n## TIMEOUT\n##\n')
+        return None
+    else:
+        x = etree.fromstring(data)
+        operation = wsd_common.xml_find(x, ".//wsa:Action").text.split("/")[-1].upper()
+        if wsd_common.debug:
+            print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
+            wsd_common.log_xml(x)
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+
+        target_service = wsd_discovery__structures.TargetService()
+        target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
+        q = wsd_common.xml_find(x, ".//wsd:MetadataVersion")
+        if q is not None:
+            target_service.meta_ver = int(q.text)
+
+    sock.close()
+    return operation == "HELLO", target_service
+
+
 def wsd_probe(probe_timeout: int = 3,
               type_filter: typing.Set[str] = None) \
         -> typing.Set[wsd_discovery__structures.TargetService]:
@@ -126,6 +177,7 @@ def wsd_probe(probe_timeout: int = 3,
         if not ts:
             break
         target_services_list.add(ts)
+        discovery_log("FOUND          " + ts.ep_ref_addr)
 
     sock.close()
     return target_services_list
@@ -148,13 +200,15 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
                                    fields,
                                    1)
 
+    discovery_log("RESOLVING      " + target_service.ep_ref_addr)
     ts = read_discovery_multicast_reply(sock, target_service, "RESOLVE")
-
     sock.close()
 
     if not ts:
+        discovery_log("UNRESOLVED     " + target_service.ep_ref_addr)
         return target_service
     else:
+        discovery_log("RESOLVED       " + ts.ep_ref_addr)
         return ts
 
 
@@ -188,55 +242,86 @@ def get_devices(cache: bool = True,
             d_resolved.add(wsd_resolve(t))
 
     if cache is True:
-        # Open the DB, if exists, or create a new one
-        p = os.environ.get("WSD_CACHE_PATH", "")
-        if p == "":
-            p = os.path.expanduser("~/.wsdcache.db")
-            os.environ["WSD_CACHE_PATH"] = p
+        db = sqlite3.connect(db_path)
 
-        db = sqlite3.connect(p)
-        cursor = db.cursor()
+        create_table_if_not_exists(db)
 
-        cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (EpRefAddr TEXT PRIMARY KEY, SerializedTarget TEXT);")
-        db.commit()
-
-        # Read entries from DB
-        c = set()
-        cursor.execute('SELECT DISTINCT EpRefAddr, SerializedTarget FROM WsdCache')
-        for row in cursor:
-            c.add(pickle.loads(row[1].encode()))
+        c = read_targets_from_db(db)
 
         # Discard not-reachable targets
         for t in c:
-            try:
-                wsd_transfer__operations.wsd_get(t)
+            s = check_target_status(t)
+            if s:
                 c_ok.add(t)
-            except TimeoutError:
-                cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', t.ep_ref_addr)
-        db.commit()
+            else:
+                remove_target_from_db(db, t)
 
         # Add discovered entries to DB
         for i in d_resolved:
-            cursor.execute('INSERT OR REPLACE INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
-                           (i.ep_ref_addr, pickle.dumps(i, 0).decode(),))
-        db.commit()
+            add_target_to_db(db, i)
 
         db.close()
 
     result = set()
     for elem in set.union(c_ok, d_resolved):
-        if not elem.types.isdisjoint(type_filter):
+        if not type_filter or not elem.types.isdisjoint(type_filter):
             result.add(elem)
     return result
 
 
-def __demo():
-    wsd_common.init()
-    wsd_common.debug = True
-    tsl = get_devices(probe_timeout=3, type_filter={"wscn:ScanDeviceType"})
-    for a in tsl:
-        print(a)
+def create_table_if_not_exists(db: sqlite3.Connection) -> None:
+    cursor = db.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (EpRefAddr TEXT PRIMARY KEY, SerializedTarget TEXT);")
+    db.commit()
 
 
-if __name__ == "__main__":
-    __demo()
+def check_target_status(t: wsd_discovery__structures.TargetService) -> bool:
+    try:
+        discovery_log("VERIFYING      " + t.ep_ref_addr)
+        wsd_transfer__operations.wsd_get(t)
+        discovery_log("VERIFIED       " + t.ep_ref_addr)
+        return True
+    except TimeoutError:
+        return False
+
+
+def read_targets_from_db(db: sqlite3.Connection) -> typing.Set[wsd_discovery__structures.TargetService]:
+    cursor = db.cursor()
+    c = set()
+    cursor.execute('SELECT DISTINCT EpRefAddr, SerializedTarget FROM WsdCache')
+    for row in cursor:
+        c.add(pickle.loads(row[1].encode()))
+    return c
+
+
+def add_target_to_db(db: sqlite3.Connection,
+                     t: wsd_discovery__structures.TargetService) -> None:
+    cursor = db.cursor()
+    discovery_log("REGISTERING    " + t.ep_ref_addr)
+    cursor.execute('INSERT OR REPLACE INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
+                   (t.ep_ref_addr, pickle.dumps(t, 0).decode(),))
+    discovery_log("REGISTERED     " + t.ep_ref_addr)
+    db.commit()
+
+
+def remove_target_from_db(db: sqlite3.Connection,
+                          t: wsd_discovery__structures.TargetService) -> None:
+    cursor = db.cursor()
+    discovery_log("LOST           " + t.ep_ref_addr)
+    discovery_log("UNREGISTERING  " + t.ep_ref_addr)
+    cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', (t.ep_ref_addr,))
+    discovery_log("UNREGISTERED   " + t.ep_ref_addr)
+    db.commit()
+
+
+def set_discovery_verbosity(lvl: int):
+    global discovery_verbosity
+    discovery_verbosity = lvl
+
+
+def discovery_log(text: str, lvl: int = 1):
+    print(text) if lvl >= discovery_verbosity else None
+
+
+def open_db() -> sqlite3.Connection:
+    return sqlite3.connect(db_path)
