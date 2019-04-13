@@ -1,20 +1,20 @@
 <?xml version='1.0' encoding='ASCII'?>
-<s:Envelope xmlns:a="http://schemas.xmlsoap.org/ws/2004/08/addressing"
-            xmlns:d="http://schemas.xmlsoap.org/ws/2005/04/discovery"
-            xmlns:s="http://www.w3.org/2003/05/soap-envelope">
-    <s:Header>
-        <a:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</a:Action>
-        <a:MessageID>uuid:0a6dc791-2be6-4991-9af1-454778a1917a</a:MessageID>
-        <a:From>
-			<a:Address>{{FROM}}</a:Address>
-		</a:From>
-		<a:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</a:To>
-        <a:ReplyTo>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</a:ReplyTo>
-    </s:Header>
-    <s:Body>
-        <d:Probe>
+<soap:Envelope xmlns:wsa="http://schemas.xmlsoap.org/ws/2004/08/addressing"
+               xmlns:wsd="http://schemas.xmlsoap.org/ws/2005/04/discovery"
+               xmlns:soap="http://www.w3.org/2003/05/soap-envelope">
+    <soap:Header>
+        <wsa:Action>http://schemas.xmlsoap.org/ws/2005/04/discovery/Probe</wsa:Action>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
+        <wsa:From>
+            <wsa:Address>{{FROM}}</wsa:Address>
+        </wsa:From>
+        <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
+        <wsa:ReplyTo>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:ReplyTo>
+    </soap:Header>
+    <soap:Body>
+        <wsd:Probe>
             {{OPT_TYPES}}
-        </d:Probe>
-    </s:Body>
-</s:Envelope>
+        </wsd:Probe>
+    </soap:Body>
+</soap:Envelope>
 

@@ -58,6 +58,7 @@ def message_from_file(fname: str,
         .replace('\r', '')
     for k in kwargs:
         req = req.replace('{{' + k + '}}', str(kwargs[k]))
+    req = req.replace('{{MSG_ID}}', gen_urn())
     return req
 
 
@@ -193,6 +194,12 @@ def xml_findall(xml_tree: etree.ElementTree,
 def log_xml(xml_tree: etree.ElementTree):
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
     logfile.write(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True).decode("ASCII"))
+
+
+def enable_debug(f: bool = True) -> None:
+    global debug
+    debug = f
+
 
 def init() -> None:
     global urn

@@ -18,17 +18,19 @@ def monitor(args):
     wsd_discovery__operations.get_devices(probe_timeout=args.timeout)
 
     db = wsd_discovery__operations.open_db()
+    sockets = wsd_discovery__operations.init_multicast_listener()
     try:
         while True:
-            (hello, target) = wsd_discovery__operations.listen_multicast_announcements()
+            (hello, target) = wsd_discovery__operations.listen_multicast_announcements(sockets)
             if hello:
-                target = wsd_discovery__operations.wsd_resolve(target)
-                wsd_discovery__operations.add_target_to_db(db, target)
+                ok, target = wsd_discovery__operations.wsd_resolve(target)
+                if ok:
+                    wsd_discovery__operations.add_target_to_db(db, target)
             else:
                 wsd_discovery__operations.remove_target_from_db(db, target)
     except KeyboardInterrupt:
         pass
-
+    wsd_discovery__operations.deinit_multicast_listener(sockets)
     db.close()
 
 
@@ -84,6 +86,7 @@ def parse_cmd_line():
     update_db_parser.set_defaults(func=update_db)
 
     args = parser.parse_args()
+    wsd_common.enable_debug(args.debug)
     args.func(args)
 
 

@@ -82,7 +82,7 @@ def wsd_get(target_service: wsd_discovery__structures.TargetService):
 
 def __demo():
     wsd_common.init()
-    wsd_common.debug = True
+    wsd_common.enable_debug()
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         print(a)

@@ -3,6 +3,7 @@
 
 import os
 import pickle
+import select
 import socket
 import sqlite3
 import struct
@@ -17,6 +18,10 @@ from PyWSD import wsd_common, \
 discovery_verbosity = 0
 
 multicast_group = ('239.255.255.250', 3702)
+
+wsd_mcast_v4 = '239.255.255.250'
+wsd_mcast_v6 = 'FF02::C'
+wsd_udp_port = 3702
 
 db_path = os.environ.get("WSD_CACHE_PATH", "")
 if not db_path:
@@ -56,7 +61,7 @@ def send_multicast_soap_msg(xml_template: str,
         print('##\n## %s\n##\n' % op_name)
         wsd_common.log_xml(r)
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
-    sock.sendto(message.encode("UTF-8"), multicast_group)
+    sock.sendto(message.encode("UTF-8"), (wsd_mcast_v4, wsd_udp_port))
     return sock
 
 
@@ -104,47 +109,69 @@ def read_discovery_multicast_reply(sock: socket.socket,
     return target_service
 
 
-wsd_port_v4 = ('239.255.255.250', 3702)
+def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
+    addrinfo = None
+    for a in socket.getaddrinfo(addr, port):
+        if a[1].name == 'SOCK_DGRAM':
+            addrinfo = a
+
+    if not addrinfo:
+        raise ConnectionError
+
+    sock = socket.socket(addrinfo[0], socket.SOCK_DGRAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('', port))
+    gbin = socket.inet_pton(addrinfo[0], addrinfo[4][0])
+    if addrinfo[0] == socket.AF_INET:
+        mreq = gbin + struct.pack('=I', socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+    else:
+        mreq = gbin + struct.pack('@I', 0)
+        sock.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_JOIN_GROUP, mreq)
+
+    return sock
 
 
-# wsd_port_v6 = ('FF02::C', 3702)
+def init_multicast_listener():
+    sock_1 = open_multicast_udp_socket(wsd_mcast_v4, wsd_udp_port)
+    sock_2 = open_multicast_udp_socket(wsd_mcast_v6, wsd_udp_port)
 
-# wsd_port_v4 = ('', 3702)
-# wsd_port_v6 = ('FF02::C', 3702)
+    return [sock_1, sock_2]
 
-def listen_multicast_announcements() \
+
+def deinit_multicast_listener(sockets):
+    for sock in sockets:
+        sock.close()
+
+
+def listen_multicast_announcements(sockets) \
         -> typing.Tuple[bool, wsd_discovery__structures.TargetService]:
     """
 
     """
+    empty = []
+    readable = []
+    operation = ""
+    while operation not in ["HELLO", "BYE"]:
+        while not readable:
+            readable, writable, exceptional = select.select(sockets, empty, empty)
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(wsd_port_v4)
-    mreq = socket.inet_aton(wsd_port_v4[0]) + socket.inet_aton("0.0.0.0")
-    sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
-
-    try:
-        data, server = sock.recvfrom(4096)
-    except socket.timeout:
-        if wsd_common.debug:
-            print('##\n## TIMEOUT\n##\n')
-        return None
-    else:
+        data, server = readable[0].recvfrom(4096)
         x = etree.fromstring(data)
         operation = wsd_common.xml_find(x, ".//wsa:Action").text.split("/")[-1].upper()
-        if wsd_common.debug:
-            print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
-            wsd_common.log_xml(x)
-            print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+        readable = []
 
-        target_service = wsd_discovery__structures.TargetService()
-        target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
-        q = wsd_common.xml_find(x, ".//wsd:MetadataVersion")
-        if q is not None:
-            target_service.meta_ver = int(q.text)
+    if wsd_common.debug:
+        print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
+        wsd_common.log_xml(x)
+        print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-    sock.close()
+    target_service = wsd_discovery__structures.TargetService()
+    target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
+    q = wsd_common.xml_find(x, ".//wsd:MetadataVersion")
+    if q is not None:
+        target_service.meta_ver = int(q.text)
+
     return operation == "HELLO", target_service
 
 
@@ -184,7 +211,7 @@ def wsd_probe(probe_timeout: int = 3,
 
 
 def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
-        -> wsd_discovery__structures.TargetService:
+        -> typing.Tuple[bool, wsd_discovery__structures.TargetService]:
     """
     Send a multicast resolve message, and wait for the targeted service to respond.
 
@@ -198,18 +225,17 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
               "EP_ADDR": target_service.ep_ref_addr}
     sock = send_multicast_soap_msg("ws-discovery__resolve.xml",
                                    fields,
-                                   1)
+                                   2)
 
-    discovery_log("RESOLVING      " + target_service.ep_ref_addr)
     ts = read_discovery_multicast_reply(sock, target_service, "RESOLVE")
     sock.close()
 
     if not ts:
         discovery_log("UNRESOLVED     " + target_service.ep_ref_addr)
-        return target_service
+        return False, target_service
     else:
         discovery_log("RESOLVED       " + ts.ep_ref_addr)
-        return ts
+        return True, ts
 
 
 def get_devices(cache: bool = True,
@@ -239,7 +265,9 @@ def get_devices(cache: bool = True,
         d = wsd_probe(probe_timeout, type_filter)
 
         for t in d:
-            d_resolved.add(wsd_resolve(t))
+            ok, t = wsd_resolve(t)
+            if ok:
+                d_resolved.add(t)
 
     if cache is True:
         db = sqlite3.connect(db_path)
@@ -277,11 +305,10 @@ def create_table_if_not_exists(db: sqlite3.Connection) -> None:
 
 def check_target_status(t: wsd_discovery__structures.TargetService) -> bool:
     try:
-        discovery_log("VERIFYING      " + t.ep_ref_addr)
         wsd_transfer__operations.wsd_get(t)
         discovery_log("VERIFIED       " + t.ep_ref_addr)
         return True
-    except TimeoutError:
+    except (TimeoutError, StopIteration):
         return False
 
 
@@ -297,7 +324,6 @@ def read_targets_from_db(db: sqlite3.Connection) -> typing.Set[wsd_discovery__st
 def add_target_to_db(db: sqlite3.Connection,
                      t: wsd_discovery__structures.TargetService) -> None:
     cursor = db.cursor()
-    discovery_log("REGISTERING    " + t.ep_ref_addr)
     cursor.execute('INSERT OR REPLACE INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
                    (t.ep_ref_addr, pickle.dumps(t, 0).decode(),))
     discovery_log("REGISTERED     " + t.ep_ref_addr)
@@ -307,8 +333,6 @@ def add_target_to_db(db: sqlite3.Connection,
 def remove_target_from_db(db: sqlite3.Connection,
                           t: wsd_discovery__structures.TargetService) -> None:
     cursor = db.cursor()
-    discovery_log("LOST           " + t.ep_ref_addr)
-    discovery_log("UNREGISTERING  " + t.ep_ref_addr)
     cursor.execute('DELETE FROM WsdCache WHERE EpRefAddr=?', (t.ep_ref_addr,))
     discovery_log("UNREGISTERED   " + t.ep_ref_addr)
     db.commit()
