@@ -1,6 +1,7 @@
 import argparse
 from urllib.parse import urlparse
 
+import wsd_discovery__parsers
 from PyWSD import wsd_common, wsd_discovery__operations, wsd_transfer__operations
 
 
@@ -38,6 +39,7 @@ def show_list(args):
     db = wsd_discovery__operations.open_db()
     targets = wsd_discovery__operations.read_targets_from_db(db)
     device_types = set()
+    #TODO: resolve namespaces, do not compare raw labels
     if "p" in args.filter:
         device_types.add("wprt:PrintDeviceType")
     if "s" in args.filter:
@@ -91,7 +93,6 @@ def parse_cmd_line():
 
 
 def __main():
-    wsd_common.init()
     parse_cmd_line()
 
 

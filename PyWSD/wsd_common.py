@@ -9,6 +9,7 @@ import uuid
 
 import lxml.etree as etree
 import requests
+import wsd_globals
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
          "mex": "http://schemas.xmlsoap.org/ws/2004/09/mex",
@@ -28,7 +29,6 @@ urn = ""
 log_path = "../log"
 
 parser = etree.XMLParser(remove_blank_text=True)
-message_parsers = dict()
 
 def gen_urn() -> str:
     """
@@ -222,13 +222,18 @@ def get_xml_int(xml_tree: etree.ElementTree, query: str) -> typing.Union[int, No
 
 
 def register_message_parser(action: str, msg_parser: typing.Callable) -> None:
-    global message_parsers
-    message_parsers[action] = msg_parser
+    wsd_globals.message_parsers[action] = msg_parser
 
 
 def unregister_message_parser(action: str) -> None:
-    global message_parsers
-    del message_parsers[action]
+    del wsd_globals.message_parsers[action]
+
+
+def parse(xml_tree: etree.ElementTree):
+    a = get_action_id(xml_tree)
+    if a in wsd_globals.message_parsers:
+        return wsd_globals.message_parsers[a](xml_tree)
+
 
 def log_xml(xml_tree: etree.ElementTree):
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
@@ -240,10 +245,12 @@ def enable_debug(f: bool = True) -> None:
     debug = f
 
 
-def init() -> None:
+def init():
     global urn
     urn = gen_urn()
     try:
         os.mkdir(log_path)
     except FileExistsError:
         pass
+
+init()

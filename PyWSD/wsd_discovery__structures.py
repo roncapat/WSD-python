@@ -37,27 +37,17 @@ class HelloMessage:
         self.message_id = None
         self.relates_to = None         # allowed only if a proxy replies to a multicast probe
         self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
-        self.ep_ref_addr = None
-        self.types = set()
-        self.scopes = set()
-        self.xaddrs = set()
-        self.metadata_version = None
+        self.ts = TargetService()
 
     def is_valid(self):
         valid = True
         valid = valid & (self.message_id is not None)
-        valid = valid & (self.ep_reference is not None)
-        valid = valid & (self.metadata_version is not None)
+        valid = valid & (self.ts.ep_ref_addr is not None)
+        valid = valid & (self.ts.metadata_version is not None)
         return valid
 
     def get_target_service(self):
-        ts = TargetService()
-        ts.ep_ref_addr = self.ep_ref_addr
-        ts.types = self.types
-        ts.scopes = self.scopes
-        ts.xaddrs = self.xaddrs
-        ts.meta_ver = self.metadata_version
-        return ts
+        return self.ts
 
 
 class ByeMessage:
@@ -65,16 +55,39 @@ class ByeMessage:
         self.action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye"
         self.message_id = None
         self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
-        self.ep_ref_addr = None
+        self.ts = TargetService()
 
     def is_valid(self):
         valid = True
         valid = valid & (self.message_id is not None)
-        valid = valid & (self.ep_reference is not None)
+        valid = valid & (self.ts.ep_ref_addr is not None)
         return valid
 
     def get_target_service(self):
-        ts = TargetService()
-        ts.ep_ref_addr = self.ep_ref_addr
-        return ts
+        return self.ts
 
+
+class ProbeMatchesMessage:
+    def __init__(self):
+        self.action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches"
+        self.message_id = None
+        self.relates_to = None
+        self.to = None
+        self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
+        self.matches = []
+
+    def get_target_services(self):
+        return self.matches
+
+
+class ResolveMatchesMessage:
+    def __init__(self):
+        self.action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches"
+        self.message_id = None
+        self.relates_to = None
+        self.to = None
+        self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
+        self.ts = None
+
+    def get_target_service(self):
+        return self.ts

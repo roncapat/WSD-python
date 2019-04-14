@@ -13,6 +13,7 @@ import lxml.etree as etree
 
 from PyWSD import wsd_common, \
     wsd_discovery__structures, \
+    wsd_discovery__parsers, \
     wsd_transfer__operations
 
 discovery_verbosity = 0
@@ -27,45 +28,6 @@ db_path = os.environ.get("WSD_CACHE_PATH", "")
 if not db_path:
     db_path = os.path.expanduser("~/.wsdcache.db")
     os.environ["WSD_CACHE_PATH"] = db_path
-
-
-def get_sequence(xml_tree: etree.ElementTree) -> typing.List[int]:
-    q = wsd_common.xml_find(xml_tree, ".//wsd:AppSequence")
-    seq = [0, 0, 0]
-    seq[0] = int(q.attrib['InstanceId'])
-    if 'SequenceId' in q.attrib:
-        seq[1] = int(q.attrib['SequenceId'])
-    seq[2] = int(q.attrib['MessageNumber'])
-    return seq
-
-
-def parser_hello(xml_tree: etree.ElementTree) -> wsd_discovery__structures.HelloMessage:
-    o = wsd_discovery__structures.HelloMessage()
-    header = wsd_common.get_header_tree(xml_tree)
-    o.message_id = wsd_common.get_xml_str(header, ".//wsa:MessageID")
-    o.relates_to = wsd_common.get_xml_str(header, ".//wsa:RelatesTo")
-    o.app_sequence = get_sequence(header)
-    body = wsd_common.get_body_tree(xml_tree)
-    o.ep_ref_addr = wsd_common.get_xml_str(body, ".//wsa:EndpointReference/wsa:Address")
-    o.types = wsd_common.get_xml_str_set(body, ".//wsd:Types")
-    o.scopes = wsd_common.get_xml_str_set(body, ".//wsd:Scopes")
-    o.xaddrs = wsd_common.get_xml_str_set(body, ".//wsd:XAddrs")
-    o.metadata_version = wsd_common.get_xml_int(body, ".//wsd:MetadataVersion")
-    return o
-
-
-def parser_bye(xml_tree: etree.ElementTree) -> wsd_discovery__structures.ByeMessage:
-    o = wsd_discovery__structures.ByeMessage()
-    header = wsd_common.get_header_tree(xml_tree)
-    o.message_id = wsd_common.get_xml_str(header, ".//wsa:MessageID")
-    o.app_sequence = get_sequence(header)
-    body = wsd_common.get_body_tree(xml_tree)
-    o.ep_ref_addr = wsd_common.get_xml_str(body, ".//wsa:EndpointReference/wsa:Address")
-    return o
-
-
-wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello", parser_hello)
-wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye", parser_bye)
 
 
 def send_multicast_soap_msg(xml_template: str,
@@ -104,11 +66,9 @@ def send_multicast_soap_msg(xml_template: str,
     return sock
 
 
-# TODO: split listening and parsing
 def read_discovery_multicast_reply(sock: socket.socket,
-                                   target_service: wsd_discovery__structures.TargetService,
-                                   operation: str) \
-        -> typing.Union[None, wsd_discovery__structures.TargetService]:
+                                   target_service: wsd_discovery__structures.TargetService) \
+        -> typing.Union[None, typing.Tuple[bool, typing.List[wsd_discovery__structures.TargetService]]]:
     """
     Waits for a reply from an endpoint, containing info about the target itself. Used to
     catch wsd_probe and wsd_resolve responses. Updates the target_service with data collected.
@@ -126,26 +86,26 @@ def read_discovery_multicast_reply(sock: socket.socket,
     except socket.timeout:
         if wsd_common.debug:
             print('##\n## TIMEOUT\n##\n')
-        return None
+        return False, []
     else:
         x = etree.fromstring(data)
+
+        action = wsd_common.get_action_id(x)
+
+        if action not in ["http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches",
+                          "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches"]:
+            return None
+
         if wsd_common.debug:
-            print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
+            print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
             wsd_common.log_xml(x)
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-        target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
-        q = wsd_common.xml_find(x, ".//wsd:Types")
-        if q is not None:
-            target_service.types = target_service.types.union(q.text.split())
-        q = wsd_common.xml_find(x, ".//wsd:Scopes")
-        if q is not None:
-            target_service.scopes = target_service.scopes.union(q.text.split())
-        q = wsd_common.xml_find(x, ".//wsd:XAddrs")
-        if q is not None:
-            target_service.xaddrs = target_service.xaddrs.union(q.text.split())
-        target_service.meta_ver = int(wsd_common.xml_find(x, ".//wsd:MetadataVersion").text)
-    return target_service
+        if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches":
+            tt = wsd_common.parse(x).get_target_services()
+            return len(tt) > 1, tt
+        if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches":
+            return False, wsd_common.parse(x).get_target_service()
 
 
 def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
@@ -208,9 +168,9 @@ def listen_multicast_announcements(sockets) \
         print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
     if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello":
-        return True, parser_hello(x).get_target_service()
+        return True, wsd_common.parse(x).get_target_service()
     if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye":
-        return False, parser_bye(x).get_target_service()
+        return False, wsd_common.parse(x).get_target_service()
 
 
 def wsd_probe(probe_timeout: int = 3,
@@ -238,11 +198,11 @@ def wsd_probe(probe_timeout: int = 3,
     target_services_list = set()
 
     while True:
-        ts = read_discovery_multicast_reply(sock, wsd_discovery__structures.TargetService(), "PROBE")
+        is_proxy, ts = read_discovery_multicast_reply(sock, wsd_discovery__structures.TargetService())
         if not ts:
             break
-        target_services_list.add(ts)
-        discovery_log("FOUND          " + ts.ep_ref_addr)
+        target_services_list.add(ts[0]) #TODO handle is_proxy
+        discovery_log("FOUND          " + ts[0].ep_ref_addr)
 
     sock.close()
     return target_services_list
@@ -265,7 +225,7 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
                                    fields,
                                    2)
 
-    ts = read_discovery_multicast_reply(sock, target_service, "RESOLVE")
+    _, ts = read_discovery_multicast_reply(sock, target_service)
     sock.close()
 
     if not ts:
