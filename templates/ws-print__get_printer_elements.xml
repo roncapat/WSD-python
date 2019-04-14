@@ -5,7 +5,7 @@
     <soap:Header>
         <wsa:To>{{TO}}</wsa:To>
         <wsa:Action>http://schemas.microsoft.com/windows/2006/08/wdp/print/GetPrinterElements</wsa:Action>
-        <wsa:MessageID>urn:uuid:5df32cda-6096-40a6-9450-a13eaecd3f2c</wsa:MessageID>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
         <wsa:ReplyTo>
             <wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
         </wsa:ReplyTo>

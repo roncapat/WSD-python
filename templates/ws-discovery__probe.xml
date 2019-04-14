@@ -9,7 +9,7 @@
             <wsa:Address>{{FROM}}</wsa:Address>
         </wsa:From>
         <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
-        <wsa:ReplyTo>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:ReplyTo>
+        <wsa:ReplyTo>{{FROM}}</wsa:ReplyTo>
     </soap:Header>
     <soap:Body>
         <wsd:Probe>

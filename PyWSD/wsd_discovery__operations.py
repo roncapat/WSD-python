@@ -29,6 +29,45 @@ if not db_path:
     os.environ["WSD_CACHE_PATH"] = db_path
 
 
+def get_sequence(xml_tree: etree.ElementTree) -> typing.List[int]:
+    q = wsd_common.xml_find(xml_tree, ".//wsd:AppSequence")
+    seq = [0, 0, 0]
+    seq[0] = int(q.attrib['InstanceId'])
+    if 'SequenceId' in q.attrib:
+        seq[1] = int(q.attrib['SequenceId'])
+    seq[2] = int(q.attrib['MessageNumber'])
+    return seq
+
+
+def parser_hello(xml_tree: etree.ElementTree) -> wsd_discovery__structures.HelloMessage:
+    o = wsd_discovery__structures.HelloMessage()
+    header = wsd_common.get_header_tree(xml_tree)
+    o.message_id = wsd_common.get_xml_str(header, ".//wsa:MessageID")
+    o.relates_to = wsd_common.get_xml_str(header, ".//wsa:RelatesTo")
+    o.app_sequence = get_sequence(header)
+    body = wsd_common.get_body_tree(xml_tree)
+    o.ep_ref_addr = wsd_common.get_xml_str(body, ".//wsa:EndpointReference/wsa:Address")
+    o.types = wsd_common.get_xml_str_set(body, ".//wsd:Types")
+    o.scopes = wsd_common.get_xml_str_set(body, ".//wsd:Scopes")
+    o.xaddrs = wsd_common.get_xml_str_set(body, ".//wsd:XAddrs")
+    o.metadata_version = wsd_common.get_xml_int(body, ".//wsd:MetadataVersion")
+    return o
+
+
+def parser_bye(xml_tree: etree.ElementTree) -> wsd_discovery__structures.ByeMessage:
+    o = wsd_discovery__structures.ByeMessage()
+    header = wsd_common.get_header_tree(xml_tree)
+    o.message_id = wsd_common.get_xml_str(header, ".//wsa:MessageID")
+    o.app_sequence = get_sequence(header)
+    body = wsd_common.get_body_tree(xml_tree)
+    o.ep_ref_addr = wsd_common.get_xml_str(body, ".//wsa:EndpointReference/wsa:Address")
+    return o
+
+
+wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello", parser_hello)
+wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye", parser_bye)
+
+
 def send_multicast_soap_msg(xml_template: str,
                             fields_map: typing.Dict[str, str],
                             timeout: int) \
@@ -152,28 +191,26 @@ def listen_multicast_announcements(sockets) \
     """
     empty = []
     readable = []
-    operation = ""
-    while operation not in ["HELLO", "BYE"]:
+    action = ""
+    while action not in ["http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello",
+                         "http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye"]:
         while not readable:
             readable, writable, exceptional = select.select(sockets, empty, empty)
 
         data, server = readable[0].recvfrom(4096)
         x = etree.fromstring(data)
-        operation = wsd_common.xml_find(x, ".//wsa:Action").text.split("/")[-1].upper()
+        action = wsd_common.get_action_id(x)
         readable = []
 
     if wsd_common.debug:
-        print('##\n## %s MATCH\n## %s\n##\n' % (operation, server[0]))
+        print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
         wsd_common.log_xml(x)
         print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-    target_service = wsd_discovery__structures.TargetService()
-    target_service.ep_ref_addr = wsd_common.xml_find(x, ".//wsa:Address").text
-    q = wsd_common.xml_find(x, ".//wsd:MetadataVersion")
-    if q is not None:
-        target_service.meta_ver = int(q.text)
-
-    return operation == "HELLO", target_service
+    if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello":
+        return True, parser_hello(x).get_target_service()
+    if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye":
+        return False, parser_bye(x).get_target_service()
 
 
 def wsd_probe(probe_timeout: int = 3,

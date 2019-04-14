@@ -5,7 +5,7 @@
 	<soap:Header>
 		<wsa:To>{{TO}}</wsa:To>
 		<wsa:Action>http://schemas.microsoft.com/windows/2006/08/wdp/scan/RetrieveImage</wsa:Action>
-		<wsa:MessageID>urn:uuid:52b04a16-55d6-4b8f-a23c-55759d11cea5</wsa:MessageID>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
 		<wsa:ReplyTo>
 			<wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
 		</wsa:ReplyTo>

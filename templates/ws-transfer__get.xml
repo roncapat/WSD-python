@@ -4,7 +4,7 @@
     <soap:Header>
         <wsa:To>{{TO}}</wsa:To>
         <wsa:Action>http://schemas.xmlsoap.org/ws/2004/09/transfer/Get</wsa:Action>
-        <wsa:MessageID>urn:uuid:e45dfa88-6388-4cf5-8e01-2af8cc463ab7</wsa:MessageID>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
         <wsa:ReplyTo>
             <wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
         </wsa:ReplyTo>

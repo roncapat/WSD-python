@@ -28,7 +28,7 @@ urn = ""
 log_path = "../log"
 
 parser = etree.XMLParser(remove_blank_text=True)
-
+message_parsers = dict()
 
 def gen_urn() -> str:
     """
@@ -129,7 +129,7 @@ def submit_request(addrs: typing.Set[str],
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
         return x
 
-    raise RuntimeError
+    raise StopIteration
 
 def check_fault(xml_soap_tree: etree.ElementTree) \
         -> bool:
@@ -193,6 +193,42 @@ def xml_findall(xml_tree: etree.ElementTree,
 
     return xml_tree.findall(query, NSMAP)
 
+
+def get_action_id(xml_tree: etree.ElementTree) -> str:
+    return xml_find(xml_tree, ".//wsa:Action").text
+
+
+def get_body_tree(xml_tree: etree.ElementTree) -> typing.Union[etree.ElementTree, None]:
+    return xml_find(xml_tree, ".//soap:Body")
+
+
+def get_header_tree(xml_tree: etree.ElementTree) -> typing.Union[etree.ElementTree, None]:
+    return xml_find(xml_tree, ".//soap:Header")
+
+
+def get_xml_str(xml_tree: etree.ElementTree, query: str) -> typing.Union[str, None]:
+    q = xml_find(xml_tree, query)
+    return q.text if q is not None else None
+
+
+def get_xml_str_set(xml_tree: etree.ElementTree, query: str) -> typing.Union[typing.Set[str], None]:
+    q = xml_find(xml_tree, query)
+    return set(q.text.split()) if q is not None else None
+
+
+def get_xml_int(xml_tree: etree.ElementTree, query: str) -> typing.Union[int, None]:
+    q = xml_find(xml_tree, query)
+    return int(q.text) if q is not None else None
+
+
+def register_message_parser(action: str, msg_parser: typing.Callable) -> None:
+    global message_parsers
+    message_parsers[action] = msg_parser
+
+
+def unregister_message_parser(action: str) -> None:
+    global message_parsers
+    del message_parsers[action]
 
 def log_xml(xml_tree: etree.ElementTree):
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")

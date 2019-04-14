@@ -9,7 +9,7 @@
         </wsa:From>
         <wsa:To>{{TO}}</wsa:To>
         <wsa:Action>http://schemas.xmlsoap.org/ws/2004/08/eventing/Subscribe</wsa:Action>
-        <wsa:MessageID>urn:uuid:52b04a16-55d6-4b8f-a23c-55759d11cea5</wsa:MessageID>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
         <wsa:ReplyTo>
             <wsa:Address>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:Address>
         </wsa:ReplyTo>
