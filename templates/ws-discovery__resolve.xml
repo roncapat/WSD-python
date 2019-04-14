@@ -8,8 +8,8 @@
             <wsa:Address>{{FROM}}</wsa:Address>
         </wsa:From>
         <wsa:To>urn:schemas-xmlsoap-org:ws:2005:04:discovery</wsa:To>
-        <wsa:MessageID>urn:uuid:f4d6720a-d248-4366-b6e6-2df030f8cffa</wsa:MessageID>
-        <wsa:ReplyTo>http://schemas.xmlsoap.org/ws/2004/08/addressing/role/anonymous</wsa:ReplyTo>
+        <wsa:MessageID>{{MSG_ID}}</wsa:MessageID>
+        <wsa:ReplyTo>{{FROM}}</wsa:ReplyTo>
     </soap:Header>
     <soap:Body>
         <wsd:Resolve>

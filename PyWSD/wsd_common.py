@@ -118,7 +118,8 @@ def submit_request(addr: str,
 
     try:
         r = requests.post(addr, headers=headers, data=data, timeout=5)
-    except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError):
+    except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError) as e:
+        print(e)
         raise TimeoutError
 
     x = etree.fromstring(r.text)
@@ -170,6 +171,7 @@ def xml_find(xml_tree: etree.ElementTree,
     :return: the searched etree if found, or None otherwise
     :rtype: lxml.etree.ElementTree | None
     """
+
     return xml_tree.find(query, NSMAP)
 
 

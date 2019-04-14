@@ -344,7 +344,7 @@ def set_discovery_verbosity(lvl: int):
 
 
 def discovery_log(text: str, lvl: int = 1):
-    print(text) if lvl >= discovery_verbosity else None
+    print(text) if discovery_verbosity >= lvl else None
 
 
 def open_db() -> sqlite3.Connection:

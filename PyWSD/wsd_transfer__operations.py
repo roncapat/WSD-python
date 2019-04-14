@@ -38,11 +38,19 @@ def wsd_get(target_service: wsd_discovery__structures.TargetService):
     tinfo = wsd_transfer__structures.TargetInfo()
     # WSD-Profiles section 5.1 (+ PNP-X)
     tinfo.manufacturer = wsd_common.xml_find(meta_model, ".//wsdp:Manufacturer").text
-    tinfo.manufacturer_url = wsd_common.xml_find(meta_model, ".//wsdp:ManufacturerUrl").text
+    q = wsd_common.xml_find(meta_model, ".//wsdp:ManufacturerUrl")
+    if q is not None:
+        tinfo.manufacturer_url = q.text
     tinfo.model_name = wsd_common.xml_find(meta_model, ".//wsdp:ModelName").text
-    tinfo.model_number = wsd_common.xml_find(meta_model, ".//wsdp:ModelNumber").text
-    tinfo.model_url = wsd_common.xml_find(meta_model, ".//wsdp:ModelUrl").text
-    tinfo.presentation_url = wsd_common.xml_find(meta_model, ".//wsdp:PresentationUrl").text
+    q = wsd_common.xml_find(meta_model, ".//wsdp:ModelNumber")
+    if q is not None:
+        tinfo.model_number = q.text
+    q = wsd_common.xml_find(meta_model, ".//wsdp:ModelUrl")
+    if q is not None:
+        tinfo.model_url = q.text
+    q = wsd_common.xml_find(meta_model, ".//wsdp:PresentationUrl")
+    if q is not None:
+        tinfo.presentation_url = q.text
     tinfo.device_cat = wsd_common.xml_find(meta_model, ".//pnpx:DeviceCategory").text.split()
 
     tinfo.friendly_name = wsd_common.xml_find(meta_dev, ".//wsdp:FriendlyName").text
@@ -67,10 +75,14 @@ def wsd_get(target_service: wsd_discovery__structures.TargetService):
             hs = wsd_transfer__structures.HostedService()
             hs.types = wsd_common.xml_find(h, ".//wsdp:Types").text.split()
             hs.service_id = wsd_common.xml_find(h, ".//wsdp:ServiceId").text
-            hs.hardware_id = wsd_common.xml_find(h, ".//pnpx:HardwareId").text
-            hs.compatible_id = wsd_common.xml_find(h, ".//pnpx:CompatibleId").text
+            q = wsd_common.xml_find(h, ".//pnpx:HardwareId")
+            if q is not None:
+                hs.hardware_id = q.text
+            q = wsd_common.xml_find(h, ".//pnpx:CompatibleId")
+            if q is not None:
+                hs.compatible_id = q.text
             q = wsd_common.xml_find(h, ".//wsdp:ServiceAddress")
-            if q:
+            if q is not None:
                 hs.service_address = q.text
             er = wsd_common.xml_find(h, ".//wsa:EndpointReference")
             hs.ep_ref_addr = wsd_common.xml_find(er, ".//wsa:Address").text
