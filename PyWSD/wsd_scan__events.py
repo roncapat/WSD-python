@@ -220,7 +220,7 @@ def wsd_scan_available_event_subscribe(hosted_scan_service: wsd_transfer__struct
                   "DISPLAY_STR": display_str,
                   "CONTEXT": context_str}
     try:
-        x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+        x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                       "ws-scan__scan_available_event_subscribe.xml",
                                       fields_map)
         dest_token = wsd_common.xml_find(x, ".//sca:DestinationToken").text

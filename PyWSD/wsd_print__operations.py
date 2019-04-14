@@ -9,7 +9,7 @@ from PyWSD import wsd_common, \
 def wsd_get_printer_elements(hosted_print_service):
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_print_service.ep_ref_addr}
-    wsd_common.submit_request(hosted_print_service.ep_ref_addr,
+    wsd_common.submit_request({hosted_print_service.ep_ref_addr},
                               "ws-print__get_printer_elements.xml",
                               fields)
 

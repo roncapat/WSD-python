@@ -29,7 +29,7 @@ def wsd_get_scanner_elements(hosted_scan_service: wsd_transfer__structures.Hoste
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_scanner_elements.xml",
                                   fields)
 
@@ -65,7 +65,7 @@ def wsd_validate_scan_ticket(hosted_scan_service: wsd_transfer__structures.Hoste
 
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__validate_scan_ticket.xml",
                                   {**fields, **tkt.as_map()})
 
@@ -102,7 +102,7 @@ def wsd_create_scan_job(hosted_scan_service: wsd_transfer__structures.HostedServ
               "TO": hosted_scan_service.ep_ref_addr,
               "SCAN_ID": scan_identifier,
               "DEST_TOKEN": dest_token}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__create_scan_job.xml",
                                   {**fields, **tkt.as_map()})
 
@@ -128,7 +128,7 @@ def wsd_cancel_job(hosted_scan_service: wsd_transfer__structures.HostedService,
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__cancel_job.xml",
                                   fields)
 
@@ -153,7 +153,7 @@ def wsd_get_job_elements(hosted_scan_service: wsd_transfer__structures.HostedSer
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_job_elements.xml",
                                   fields)
 
@@ -183,7 +183,7 @@ def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedServ
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_active_jobs.xml",
                                   fields)
 
@@ -207,7 +207,7 @@ def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedServ
     """
     fields = {"FROM": wsd_common.urn,
               "TO": hosted_scan_service.ep_ref_addr}
-    x = wsd_common.submit_request(hosted_scan_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_job_history.xml",
                                   fields)
 

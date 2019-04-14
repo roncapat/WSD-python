@@ -89,7 +89,7 @@ def abs_path(relpath: str) -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))
 
 
-def submit_request(addr: str,
+def submit_request(addrs: typing.Set[str],
                    xml_template: str,
                    fields_map: typing.Dict[str, str]) \
         -> etree.ElementTree:
@@ -107,28 +107,29 @@ def submit_request(addr: str,
     :rtype: lxml.etree.ElementTree
     """
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
-
     data = message_from_file(abs_path("../templates/%s" % xml_template), **fields_map)
-
     if debug:
         r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
         log_xml(r)
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-    try:
-        r = requests.post(addr, headers=headers, data=data, timeout=5)
-    except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError) as e:
-        print(e)
-        raise TimeoutError
+    for addr in addrs:
+        # TODO: handle ipv6 link-local addresses, remember to specify interface in URI
+        # requests.post('http://[fe80::4aba:4eff:fec9:3d84%wlp3s0]:3911/', ...)
+        try:
+            r = requests.post(addr, headers=headers, data=data, timeout=5)
+        except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError) as e:
+            continue
 
-    x = etree.fromstring(r.text)
-    if debug:
-        print('##\n## %s RESPONSE\n##\n' % op_name)
-        log_xml(x)
-        print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
-    return x
+        x = etree.fromstring(r.text)
+        if debug:
+            print('##\n## %s RESPONSE\n##\n' % op_name)
+            log_xml(x)
+            print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+        return x
 
+    raise RuntimeError
 
 def check_fault(xml_soap_tree: etree.ElementTree) \
         -> bool:

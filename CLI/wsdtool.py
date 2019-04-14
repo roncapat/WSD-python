@@ -55,8 +55,8 @@ def show_list(args):
                     target_types.add("Scanner")
                 dev_id = (info.manufacturer + "_" + info.model_name).replace(" ", "_").replace(".", "")
                 dev_classes = "|".join(target_types)
-                dev_addr = urlparse(next(iter(target.xaddrs))).netloc
-                print(wsd_common.indent(dev_id + " @ " + dev_addr + " [" + dev_classes + "]"))
+                dev_addrs = ", ".join([urlparse(a).netloc for a in target.xaddrs])
+                print(wsd_common.indent(dev_id + " @ [" + dev_addrs + "] * [" + dev_classes + "]"))
             except TimeoutError:
                 pass
     db.close()

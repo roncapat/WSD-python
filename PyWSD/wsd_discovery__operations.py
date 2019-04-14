@@ -134,9 +134,10 @@ def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
 
 def init_multicast_listener():
     sock_1 = open_multicast_udp_socket(wsd_mcast_v4, wsd_udp_port)
-    sock_2 = open_multicast_udp_socket(wsd_mcast_v6, wsd_udp_port)
+    return [sock_1]
+    #sock_2 = open_multicast_udp_socket(wsd_mcast_v6, wsd_udp_port)
+    #return [sock_1, sock_2] #TODO: enable ipv6 support once stable
 
-    return [sock_1, sock_2]
 
 
 def deinit_multicast_listener(sockets):

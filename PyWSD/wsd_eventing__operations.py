@@ -53,7 +53,7 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
                   "FILTER_DIALECT": "http://schemas.xmlsoap.org/ws/2006/02/devprof/Action",
                   "EVENT": event_uri,
                   "OPT_EXPIRATION": expiration_tag}
-    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_service.ep_ref_addr},
                                   "ws-eventing__subscribe.xml",
                                   fields_map)
 
@@ -79,7 +79,7 @@ def wsd_unsubscribe(hosted_service: wsd_transfer__structures.HostedService,
     fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
-    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_service.ep_ref_addr},
                                   "ws-eventing__unsubscribe.xml",
                                   fields_map)
 
@@ -107,7 +107,7 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id,
                   "EXPIRES": expiration}
-    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_service.ep_ref_addr},
                                   "ws-eventing__renew.xml",
                                   fields_map)
 
@@ -132,7 +132,7 @@ def wsd_get_status(hosted_service: wsd_transfer__structures.HostedService,
     fields_map = {"FROM": wsd_common.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
-    x = wsd_common.submit_request(hosted_service.ep_ref_addr,
+    x = wsd_common.submit_request({hosted_service.ep_ref_addr},
                                   "ws-eventing__get_status.xml",
                                   fields_map)
 
