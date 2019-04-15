@@ -296,7 +296,10 @@ def get_devices(cache: bool = True,
 
 def create_table_if_not_exists(db: sqlite3.Connection) -> None:
     cursor = db.cursor()
-    cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache (EpRefAddr TEXT PRIMARY KEY, SerializedTarget TEXT);")
+    cursor.execute("CREATE TABLE IF NOT EXISTS WsdCache ("
+                   "EpRefAddr TEXT PRIMARY KEY, "
+                   "MetadataVersion INT NOT NULL, "
+                   "SerializedTarget TEXT);")
     db.commit()
 
 
@@ -321,8 +324,16 @@ def read_targets_from_db(db: sqlite3.Connection) -> typing.Set[wsd_discovery__st
 def add_target_to_db(db: sqlite3.Connection,
                      t: wsd_discovery__structures.TargetService) -> None:
     cursor = db.cursor()
-    cursor.execute('INSERT OR REPLACE INTO WsdCache(EpRefAddr, SerializedTarget) VALUES (?, ?)',
-                   (t.ep_ref_addr, pickle.dumps(t, 0).decode(),))
+    cursor.execute('INSERT OR REPLACE INTO WsdCache '
+                   '(EpRefAddr, MetadataVersion, SerializedTarget) '
+                   'VALUES (?,?, ?) '
+                   'ON CONFLICT (EpRefAddr) '
+                   'DO UPDATE SET '
+                   'MetadataVersion=excluded.MetadataVersion, '
+                   'SerializedTarget=excluded.SerializedTarget '
+                   'WHERE '
+                   'excluded.MetadataVersion > MetadataVersion;',
+                   (t.ep_ref_addr, t.meta_ver, pickle.dumps(t, 0).decode(),))
     discovery_log("REGISTERED     " + t.ep_ref_addr)
     db.commit()
 

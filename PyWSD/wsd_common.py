@@ -30,6 +30,7 @@ log_path = "../log"
 
 parser = etree.XMLParser(remove_blank_text=True)
 
+
 def gen_urn() -> str:
     """
     Generate a URN. It can be used as device id and/or message id
