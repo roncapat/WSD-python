@@ -109,13 +109,12 @@ def read_discovery_multicast_reply(sock: socket.socket,
 
 
 def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
-    addrinfo = None
-    for a in socket.getaddrinfo(addr, port):
-        if a[1].name == 'SOCK_DGRAM':
-            addrinfo = a
+    res = socket.getaddrinfo(addr, port, type=socket.SOCK_DGRAM)
 
-    if not addrinfo:
+    if not res:
         raise ConnectionError
+
+    addrinfo = res[0]
 
     sock = socket.socket(addrinfo[0], socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
