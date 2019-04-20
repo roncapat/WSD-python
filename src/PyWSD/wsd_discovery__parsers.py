@@ -1,7 +1,7 @@
 import typing
 from lxml import etree
-import wsd_common
-import wsd_discovery__structures
+from PyWSD import wsd_common, \
+    wsd_discovery__structures
 
 
 def get_sequence(xml_tree: etree.ElementTree) -> typing.List[int]:

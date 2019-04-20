@@ -13,7 +13,6 @@ import lxml.etree as etree
 
 from PyWSD import wsd_common, \
     wsd_discovery__structures, \
-    wsd_discovery__parsers, \
     wsd_transfer__operations
 
 discovery_verbosity = 0
@@ -46,7 +45,7 @@ def send_multicast_soap_msg(xml_template: str,
     :return: the socket use for message delivery
     :rtype: socket.socket
     """
-    message = wsd_common.message_from_file(wsd_common.abs_path("../templates/%s" % xml_template),
+    message = wsd_common.message_from_file(wsd_common.abs_path("templates/%s" % xml_template),
                                            **fields_map)
 
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()

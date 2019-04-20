@@ -1,8 +1,16 @@
+#!/usr/bin/env python3.6
+import sys
+MIN_PYTHON = (3, 6)
+if sys.version_info < MIN_PYTHON:
+    sys.exit("Python %s.%s or later is required.\n" % MIN_PYTHON)
+
 import argparse
 from urllib.parse import urlparse
 
-import wsd_discovery__parsers
-from PyWSD import wsd_common, wsd_discovery__operations, wsd_transfer__operations
+from PyWSD import wsd_common, \
+    wsd_discovery__operations, \
+    wsd_transfer__operations, \
+    wsd_discovery__parsers
 
 
 def noop(args):

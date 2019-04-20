@@ -9,7 +9,7 @@ import uuid
 
 import lxml.etree as etree
 import requests
-import wsd_globals
+from PyWSD import wsd_globals
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
          "mex": "http://schemas.xmlsoap.org/ws/2004/09/mex",
@@ -108,7 +108,7 @@ def submit_request(addrs: typing.Set[str],
     :rtype: lxml.etree.ElementTree
     """
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
-    data = message_from_file(abs_path("../templates/%s" % xml_template), **fields_map)
+    data = message_from_file(abs_path("templates/%s" % xml_template), **fields_map)
     if debug:
         r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
