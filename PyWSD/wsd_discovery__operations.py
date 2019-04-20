@@ -324,16 +324,23 @@ def read_targets_from_db(db: sqlite3.Connection) -> typing.Set[wsd_discovery__st
 def add_target_to_db(db: sqlite3.Connection,
                      t: wsd_discovery__structures.TargetService) -> None:
     cursor = db.cursor()
-    cursor.execute('INSERT OR REPLACE INTO WsdCache '
-                   '(EpRefAddr, MetadataVersion, SerializedTarget) '
-                   'VALUES (?,?, ?) '
-                   'ON CONFLICT (EpRefAddr) '
-                   'DO UPDATE SET '
-                   'MetadataVersion=excluded.MetadataVersion, '
-                   'SerializedTarget=excluded.SerializedTarget '
-                   'WHERE '
-                   'excluded.MetadataVersion > MetadataVersion;',
-                   (t.ep_ref_addr, t.meta_ver, pickle.dumps(t, 0).decode(),))
+    cursor.execute("UPDATE WsdCache "
+                   "SET    EpRefAddr = :a, "
+                   "       MetadataVersion = :b, "
+                   "       SerializedTarget = :c "
+                   "WHERE  EpRefAddr = :a "
+                   "AND MetadataVersion > :b",
+                   {"a": t.ep_ref_addr,
+                    "b": t.meta_ver,
+                    "c": pickle.dumps(t, 0).decode()})
+    if not cursor.rowcount:
+        cursor.execute("INSERT OR IGNORE "
+                       "INTO WsdCache "
+                       "(EpRefAddr, MetadataVersion, SerializedTarget) "
+                       "VALUES (:a,:b,:c)",
+                       {"a": t.ep_ref_addr,
+                        "b": t.meta_ver,
+                        "c": pickle.dumps(t, 0).decode()})
     discovery_log("REGISTERED     " + t.ep_ref_addr)
     db.commit()
 

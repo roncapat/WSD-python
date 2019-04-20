@@ -46,7 +46,7 @@ class HelloMessage:
         return valid
 
     def get_target_service(self):
-        if self.is_valid():
+        if not self.is_valid():
             print("Warning: invalid TargetService")
         return self.ts
 
@@ -65,7 +65,7 @@ class ByeMessage:
         return valid
 
     def get_target_service(self):
-        if self.is_valid():
+        if not self.is_valid():
             print("Warning: invalid TargetService")
         return self.ts
 
@@ -89,7 +89,7 @@ class ProbeMatchesMessage:
         return valid
 
     def get_target_services(self):
-        if self.is_valid():
+        if not self.is_valid():
             print("Warning: invalid TargetService")
         return self.matches
 
@@ -114,6 +114,6 @@ class ResolveMatchesMessage:
         return valid
 
     def get_target_service(self):
-        if self.is_valid():
+        if not self.is_valid():
             print("Warning: invalid TargetService")
         return self.ts
