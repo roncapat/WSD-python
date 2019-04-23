@@ -123,7 +123,7 @@ def submit_request(addrs: typing.Set[str],
         except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError) as e:
             continue
 
-        x = etree.fromstring(r.text)
+        x = etree.fromstring(r.content)
         if debug:
             print('##\n## %s RESPONSE\n##\n' % op_name)
             log_xml(x)
