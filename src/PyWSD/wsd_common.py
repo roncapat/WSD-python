@@ -26,8 +26,6 @@ NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
          "df": "http://schemas.microsoft.com/windows/2008/09/devicefoundation"}
 
 headers = {'user-agent': 'WSDAPI', 'content-type': 'application/soap+xml'}
-debug = False
-urn = ""
 log_path = "../log"
 
 parser = etree.XMLParser(remove_blank_text=True)
@@ -63,15 +61,6 @@ def message_from_file(fname: str,
         req = req.replace('{{' + k + '}}', str(kwargs[k]))
     req = req.replace('{{MSG_ID}}', gen_urn())
     return req
-
-
-def parse_cmd_line():
-    args_parser = argparse.ArgumentParser(description='WSD Discovery Scanner')
-    args_parser.add_argument('-D', action="store_true", default=False, required=False, help='Enable debug')
-    args_parser.add_argument('-T', action="store", required=False, type=int, default=2, help='Timeout')
-
-    args = args_parser.parse_args()
-    return args.D, args.T
 
 
 def indent(text: str) -> str:
@@ -265,8 +254,7 @@ def enable_debug(f: bool = True) -> None:
 
 
 def init():
-    global urn
-    urn = gen_urn()
+    wsd_globals.urn = gen_urn()
     try:
         os.mkdir(log_path)
     except FileExistsError:

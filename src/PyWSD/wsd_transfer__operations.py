@@ -4,7 +4,8 @@
 from PyWSD import wsd_common, \
     wsd_discovery__operations, \
     wsd_discovery__structures, \
-    wsd_transfer__structures
+    wsd_transfer__structures, \
+    wsd_globals
 
 
 def wsd_get(target_service: wsd_discovery__structures.TargetService):
@@ -15,7 +16,7 @@ def wsd_get(target_service: wsd_discovery__structures.TargetService):
     :type target_service: wsd_discovery__structures.TargetService
     :return: A tuple containing a TargetInfo and a list of HostedService instances.
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": target_service.ep_ref_addr}
     x = wsd_common.submit_request(target_service.xaddrs,
                                   "ws-transfer__get.xml",

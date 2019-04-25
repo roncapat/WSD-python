@@ -13,7 +13,8 @@ import lxml.etree as etree
 
 from PyWSD import wsd_common, \
     wsd_discovery__structures, \
-    wsd_transfer__operations
+    wsd_transfer__operations, \
+    wsd_globals
 
 discovery_verbosity = 0
 
@@ -187,7 +188,7 @@ def wsd_probe(probe_timeout: int = 3,
 
     opt_types = "" if type_filter is None else "<d:Types>%s</d:Types>" % ' '.join(type_filter)
 
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "OPT_TYPES": opt_types}
     sock = send_multicast_soap_msg("ws-discovery__probe.xml",
                                    fields,
@@ -217,7 +218,7 @@ def wsd_resolve(target_service: wsd_discovery__structures.TargetService) \
     :rtype: wsd_discovery__structures.TargetService
     """
 
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "EP_ADDR": target_service.ep_ref_addr}
     sock = send_multicast_soap_msg("ws-discovery__resolve.xml",
                                    fields,
