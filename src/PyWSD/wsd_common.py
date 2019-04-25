@@ -243,6 +243,12 @@ def parse(xml_tree: etree.ElementTree):
         return wsd_globals.message_parsers[a](xml_tree)
 
 
+def record_message_id(msg_id: str) -> bool:
+    if str in wsd_globals.last_msg_ids:
+        return False
+    wsd_globals.last_msg_ids[wsd_globals.last_msg_idx] = msg_id
+    wsd_globals.last_msg_idx += 1
+
 def log_xml(xml_tree: etree.ElementTree):
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
     logfile.write(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True).decode("ASCII"))
