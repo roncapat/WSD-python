@@ -6,6 +6,7 @@ class TargetInfo:
     """
     Holds information about a certain target service, such as name, model, manufacturer, and so on.
     """
+
     def __init__(self):
         self.manufacturer = ""
         self.manufacturer_url = ""
@@ -40,6 +41,7 @@ class HostedService:
     An actual service offered by a certain wsd target. Each device is a target, but
     a target can publish multiple hosted services at once.
     """
+
     def __init__(self):
         self.types = []
         self.service_id = ""

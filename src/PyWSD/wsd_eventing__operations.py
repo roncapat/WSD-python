@@ -8,7 +8,8 @@ import lxml.etree as etree
 
 from PyWSD import wsd_common, \
     wsd_transfer__structures, \
-    xml_helpers
+    xml_helpers, \
+    wsd_globals
 
 
 def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
@@ -46,7 +47,7 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
     if expiration is not None:
         expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration
 
-    fields_map = {"FROM": wsd_common.urn,
+    fields_map = {"FROM": wsd_globals.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "NOTIFY_ADDR": notify_addr,
                   "EXPIRES": expiration,
@@ -76,7 +77,7 @@ def wsd_unsubscribe(hosted_service: wsd_transfer__structures.HostedService,
     :return: False if a fault message is received instead, True otherwise
     :rtype: bool
     """
-    fields_map = {"FROM": wsd_common.urn,
+    fields_map = {"FROM": wsd_globals.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
     x = wsd_common.submit_request({hosted_service.ep_ref_addr},
@@ -103,7 +104,7 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
     :rtype: bool
     """
 
-    fields_map = {"FROM": wsd_common.urn,
+    fields_map = {"FROM": wsd_globals.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id,
                   "EXPIRES": expiration}
@@ -129,7 +130,7 @@ def wsd_get_status(hosted_service: wsd_transfer__structures.HostedService,
              the expiration date otherwise
     :rtype: None | False | datetime
     """
-    fields_map = {"FROM": wsd_common.urn,
+    fields_map = {"FROM": wsd_globals.urn,
                   "TO": hosted_service.ep_ref_addr,
                   "SUBSCRIPTION_ID": subscription_id}
     x = wsd_common.submit_request({hosted_service.ep_ref_addr},

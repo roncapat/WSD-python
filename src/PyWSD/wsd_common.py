@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- encoding: utf-8 -*-
 
-import argparse
 import datetime
+import os
 import random
 import time
-import os
 import typing
 import uuid
 
 import lxml.etree as etree
 import requests
+
 from PyWSD import wsd_globals
 
 NSMAP = {"soap": "http://www.w3.org/2003/05/soap-envelope",
@@ -88,8 +88,8 @@ def submit_request(addrs: typing.Set[str],
     """
     Send a wsd xml/soap request to the specified address, and wait for response.
 
-    :param addr: the address of the wsd service
-    :type addr: str
+    :param addrs: the address of the wsd service
+    :type addrs: [str]
     :param xml_template: the *name* of the template file to use as payload.\
     Should be of the form "prefix__some_words_for_description.xml"
     :type xml_template: str
@@ -122,7 +122,7 @@ def submit_request(addrs: typing.Set[str],
                     break
                 except requests.Timeout:
                     time.sleep(t)
-                    t = t*2 if t*2 < upper_delay else upper_delay
+                    t = t * 2 if t * 2 < upper_delay else upper_delay
                     repeat -= 1
         except requests.ConnectionError:
             continue
@@ -267,5 +267,6 @@ def init():
         os.mkdir(log_path)
     except FileExistsError:
         pass
+
 
 init()

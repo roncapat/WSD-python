@@ -16,7 +16,8 @@ from PyWSD import wsd_common, \
     wsd_eventing__operations, \
     wsd_scan__operations, \
     wsd_scan__parsers, \
-    xml_helpers
+    xml_helpers, \
+    wsd_globals
 
 token_map = {}
 host_map = {}
@@ -214,7 +215,7 @@ def wsd_scan_available_event_subscribe(hosted_scan_service: wsd_transfer__struct
     if expiration is not None:
         expiration_tag = "<wse:Expires>%s</wse:Expires>" % expiration
 
-    fields_map = {"FROM": wsd_common.urn,
+    fields_map = {"FROM": wsd_globals.urn,
                   "TO": hosted_scan_service.ep_ref_addr,
                   "NOTIFY_ADDR": notify_addr,
                   "OPT_EXPIRATION": expiration_tag,
@@ -295,7 +296,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_scan_available_event(xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## SCAN AVAILABLE EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
         client_context = wsd_common.xml_find(xml_tree, ".//sca:ClientContext").text
@@ -308,7 +309,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_scanner_elements_change_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## SCANNER ELEMENTS CHANGE EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
 
@@ -326,7 +327,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_scanner_status_summary_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## SCANNER STATUS SUMMARY EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
 
@@ -341,7 +342,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_scanner_status_condition_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## SCANNER STATUS CONDITION EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
 
@@ -351,7 +352,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_scanner_status_condition_cleared_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## SCANNER STATUS CONDITION CLEARED EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
 
@@ -362,7 +363,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_job_status_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## JOB STATUS EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
             s = wsd_common.xml_find(xml_tree, ".//sca:JobStatus")
@@ -370,7 +371,7 @@ class RequestHandler(http.server.BaseHTTPRequestHandler):
 
     @staticmethod
     def handle_job_end_state_event(queues, xml_tree):
-        if wsd_common.debug is True:
+        if wsd_globals.debug is True:
             print('##\n## JOB END STATE EVENT\n##\n')
             print(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True))
             s = wsd_common.xml_find(xml_tree, ".//sca:JobEndState")
@@ -570,7 +571,6 @@ def __demo_simple_listener():
     import wsd_discovery__operations
     import wsd_transfer__operations
     wsd_common.init()
-    (wsd_common.debug, timeout) = wsd_common.parse_cmd_line()
     tsl = wsd_discovery__operations.get_devices()
     (ti, hss) = wsd_transfer__operations.wsd_get(list(tsl)[0])
     for b in hss:
@@ -587,7 +587,7 @@ def __demo_simple_listener():
             break
 
     server = HTTPServerWithContext(('', 6666), RequestHandler, "context")
-    wsd_common.debug = True
+    wsd_globals.debug = True
     server.serve_forever()
 
 

@@ -14,7 +14,8 @@ from PyWSD import wsd_common, \
     wsd_scan__parsers, \
     wsd_scan__structures, \
     wsd_transfer__operations, \
-    wsd_transfer__structures
+    wsd_transfer__structures, \
+    wsd_globals
 
 
 def wsd_get_scanner_elements(hosted_scan_service: wsd_transfer__structures.HostedService):
@@ -27,7 +28,7 @@ def wsd_get_scanner_elements(hosted_scan_service: wsd_transfer__structures.Hoste
     :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a tuple of the form (ScannerDescription, ScannerConfiguration, ScannerStatus, ScanTicket)
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_scanner_elements.xml",
@@ -63,7 +64,7 @@ def wsd_validate_scan_ticket(hosted_scan_service: wsd_transfer__structures.Hoste
     validation, along with the same ticket submitted, or False if errors were found, along with a corrected ticket.
     """
 
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__validate_scan_ticket.xml",
@@ -98,7 +99,7 @@ def wsd_create_scan_job(hosted_scan_service: wsd_transfer__structures.HostedServ
     :rtype: wsd_scan__structures.ScanJob
     """
 
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "SCAN_ID": scan_identifier,
               "DEST_TOKEN": dest_token}
@@ -125,7 +126,7 @@ def wsd_cancel_job(hosted_scan_service: wsd_transfer__structures.HostedService,
     :return: True if the job is found and then aborted, False if the specified job do not exists or already ended.
     :rtype: bool
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
@@ -150,7 +151,7 @@ def wsd_get_job_elements(hosted_scan_service: wsd_transfer__structures.HostedSer
     :return: a tuple of the form (JobStatus, ScanTicket, DocumentParams, doclist),\
     where doclist is a list of document names
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr,
               "JOB_ID": job.id}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
@@ -181,7 +182,7 @@ def wsd_get_active_jobs(hosted_scan_service: wsd_transfer__structures.HostedServ
     :return: a list of JobSummary elements
     :rtype: list[wsd_scan__structures.JobSummary]
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_active_jobs.xml",
@@ -205,7 +206,7 @@ def wsd_get_job_history(hosted_scan_service: wsd_transfer__structures.HostedServ
     :type hosted_scan_service: wsd_transfer__structures.HostedService
     :return: a list of JobSummary elements.
     """
-    fields = {"FROM": wsd_common.urn,
+    fields = {"FROM": wsd_globals.urn,
               "TO": hosted_scan_service.ep_ref_addr}
     x = wsd_common.submit_request({hosted_scan_service.ep_ref_addr},
                                   "ws-scan__get_job_history.xml",
@@ -239,13 +240,13 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
     """
 
     data = wsd_common.message_from_file(wsd_common.abs_path("../templates/ws-scan__retrieve_image.xml"),
-                                        FROM=wsd_common.urn,
+                                        FROM=wsd_globals.urn,
                                         TO=hosted_scan_service.ep_ref_addr,
                                         JOB_ID=job.id,
                                         JOB_TOKEN=job.token,
                                         DOC_DESCR=docname)
 
-    if wsd_common.debug:
+    if wsd_globals.debug:
         r = etree.fromstring(data.encode("ASCII"), parser=wsd_common.parser)
         print('##\n## RETRIEVE IMAGE REQUEST\n##\n')
         print(etree.tostring(r, pretty_print=True, xml_declaration=True).decode("ASCII"))
@@ -265,7 +266,7 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
 
         ls = list(m.walk())
 
-        if wsd_common.debug:
+        if wsd_globals.debug:
             print('##\n## RETRIEVE IMAGE RESPONSE\n##\n%s\n' % ls[1])
 
         img = Image.open(BytesIO(ls[2].get_payload(decode=True)))
@@ -285,7 +286,7 @@ def wsd_retrieve_image(hosted_scan_service: wsd_transfer__structures.HostedServi
 
 def __demo():
     wsd_common.init()
-    wsd_common.debug = False
+    wsd_globals.debug = False
     tsl = wsd_discovery__operations.get_devices()
     for a in tsl:
         (ti, hss) = wsd_transfer__operations.wsd_get(a)

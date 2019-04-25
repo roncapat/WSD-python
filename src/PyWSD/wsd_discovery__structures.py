@@ -8,6 +8,7 @@ class TargetService:
     Each WSD device must not impersonate more than one target service, even if it
     hosts multiple services like printing, scanning, etc.
     """
+
     def __init__(self):
         self.ep_ref_addr = ""
         self.types = set()
@@ -35,7 +36,7 @@ class HelloMessage:
     def __init__(self):
         self.action = "http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello"
         self.message_id = None
-        self.relates_to = None         # allowed only if a proxy replies to a multicast probe
+        self.relates_to = None  # allowed only if a proxy replies to a multicast probe
         self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
         self.ts = TargetService()
 
@@ -77,7 +78,7 @@ class ProbeMatchesMessage:
         self.relates_to = None
         self.to = None
         self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
-        self.matches = []              # at most one element if not from a discovery proxy
+        self.matches = []  # at most one element if not from a discovery proxy
 
     def is_valid(self):
         valid = True
@@ -101,7 +102,7 @@ class ResolveMatchesMessage:
         self.relates_to = None
         self.to = None
         self.app_sequence = [0, 0, 0]  # instance, sequence, message IDs
-        self.ts = None                 # Allowed None only if it's a response from a discovery proxy
+        self.ts = None  # Allowed None only if it's a response from a discovery proxy
 
     def is_valid(self):
         valid = True

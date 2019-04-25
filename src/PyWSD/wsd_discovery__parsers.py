@@ -1,5 +1,7 @@
 import typing
+
 from lxml import etree
+
 from PyWSD import wsd_common, \
     wsd_discovery__structures
 
@@ -73,10 +75,13 @@ def parser_resolve_match(xml_tree: etree.ElementTree) -> wsd_discovery__structur
     return o
 
 
-def init()->None:
+def init() -> None:
     wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Hello", parser_hello)
     wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/Bye", parser_bye)
-    wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches", parser_probe_match)
-    wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches", parser_resolve_match)
+    wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches",
+                                       parser_probe_match)
+    wsd_common.register_message_parser("http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches",
+                                       parser_resolve_match)
+
 
 init()

@@ -57,7 +57,7 @@ def send_multicast_soap_msg(xml_template: str,
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
-    if wsd_common.debug:
+    if wsd_globals.debug:
         r = etree.fromstring(message.encode("ASCII"), parser=wsd_common.parser)
         print('##\n## %s\n##\n' % op_name)
         wsd_common.log_xml(r)
@@ -77,15 +77,13 @@ def read_discovery_multicast_reply(sock: socket.socket,
     :param sock: The socket to read from
     :type sock: socket.socket
     :param target_service: an instance of TargetService to fill or update with data received
-    :param operation: label for debug purposes only
-    :type operation: str
     :return: an updated target_service object, or False if the socket timeout is reached
     :rtype: wsd_discovery__structures.TargetService | False
     """
     try:
         data, server = sock.recvfrom(4096)
     except socket.timeout:
-        if wsd_common.debug:
+        if wsd_globals.debug:
             print('##\n## TIMEOUT\n##\n')
         return False, []
     else:
@@ -97,7 +95,7 @@ def read_discovery_multicast_reply(sock: socket.socket,
                           "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches"]:
             return None
 
-        if wsd_common.debug:
+        if wsd_globals.debug:
             print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
             wsd_common.log_xml(x)
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
@@ -161,7 +159,7 @@ def listen_multicast_announcements(sockets: typing.List[socket.socket]) \
         action = wsd_common.get_action_id(x)
         readable = []
 
-    if wsd_common.debug:
+    if wsd_globals.debug:
         print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
         wsd_common.log_xml(x)
         print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
@@ -200,7 +198,7 @@ def wsd_probe(probe_timeout: int = 3,
         is_proxy, ts = read_discovery_multicast_reply(sock, wsd_discovery__structures.TargetService())
         if not ts:
             break
-        target_services_list.add(ts[0]) #TODO handle is_proxy
+        target_services_list.add(ts[0])  # TODO handle is_proxy
         discovery_log("FOUND          " + ts[0].ep_ref_addr)
 
     sock.close()
