@@ -3,6 +3,8 @@
 
 import argparse
 import datetime
+import random
+import time
 import os
 import typing
 import uuid
@@ -118,9 +120,24 @@ def submit_request(addrs: typing.Set[str],
     for addr in addrs:
         # TODO: handle ipv6 link-local addresses, remember to specify interface in URI
         # requests.post('http://[fe80::4aba:4eff:fec9:3d84%wlp3s0]:3911/', ...)
+        r = None
+        min_delay = 50
+        max_delay = 250
+        upper_delay = 500
         try:
-            r = requests.post(addr, headers=headers, data=data, timeout=5)
-        except (requests.ReadTimeout, requests.ConnectTimeout, requests.ConnectionError) as e:
+            repeat = 2
+            t = random.uniform(min_delay, max_delay)
+            while repeat:
+                try:
+                    r = requests.post(addr, headers=headers, data=data, timeout=5)
+                    break
+                except requests.Timeout:
+                    time.sleep(t)
+                    t = t*2 if t*2 < upper_delay else upper_delay
+                    repeat -= 1
+        except requests.ConnectionError:
+            continue
+        if r is None:
             continue
 
         x = etree.fromstring(r.content)
@@ -131,6 +148,7 @@ def submit_request(addrs: typing.Set[str],
         return x
 
     raise StopIteration
+
 
 def check_fault(xml_soap_tree: etree.ElementTree) \
         -> bool:

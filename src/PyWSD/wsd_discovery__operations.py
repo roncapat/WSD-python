@@ -65,6 +65,7 @@ def send_multicast_soap_msg(xml_template: str,
     return sock
 
 
+# FIXME Check if this update mechanism is still needed
 def read_discovery_multicast_reply(sock: socket.socket,
                                    target_service: wsd_discovery__structures.TargetService) \
         -> typing.Union[None, typing.Tuple[bool, typing.List[wsd_discovery__structures.TargetService]]]:
@@ -129,20 +130,19 @@ def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
     return sock
 
 
-def init_multicast_listener():
+def init_multicast_listener() -> typing.List[socket.socket]:
     sock_1 = open_multicast_udp_socket(wsd_mcast_v4, wsd_udp_port)
     return [sock_1]
-    #sock_2 = open_multicast_udp_socket(wsd_mcast_v6, wsd_udp_port)
-    #return [sock_1, sock_2] #TODO: enable ipv6 support once stable
+    # sock_2 = open_multicast_udp_socket(wsd_mcast_v6, wsd_udp_port)
+    # return [sock_1, sock_2] #TODO: enable ipv6 support once stable
 
 
-
-def deinit_multicast_listener(sockets):
+def deinit_multicast_listener(sockets: typing.List[socket.socket]) -> None:
     for sock in sockets:
         sock.close()
 
 
-def listen_multicast_announcements(sockets) \
+def listen_multicast_announcements(sockets: typing.List[socket.socket]) \
         -> typing.Tuple[bool, wsd_discovery__structures.TargetService]:
     """
 
