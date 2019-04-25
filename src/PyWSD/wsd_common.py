@@ -248,6 +248,8 @@ def record_message_id(msg_id: str) -> bool:
         return False
     wsd_globals.last_msg_ids[wsd_globals.last_msg_idx] = msg_id
     wsd_globals.last_msg_idx += 1
+    return True
+
 
 def log_xml(xml_tree: etree.ElementTree):
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
