@@ -80,31 +80,31 @@ def read_discovery_multicast_reply(sock: socket.socket,
     :return: an updated target_service object, or False if the socket timeout is reached
     :rtype: wsd_discovery__structures.TargetService | False
     """
-    try:
-        data, server = sock.recvfrom(4096)
-    except socket.timeout:
-        if wsd_globals.debug:
-            print('##\n## TIMEOUT\n##\n')
-        return False, []
-    else:
-        x = etree.fromstring(data)
+    while True:
+        try:
+            data, server = sock.recvfrom(4096)
+        except socket.timeout:
+            if wsd_globals.debug:
+                print('##\n## TIMEOUT\n##\n')
+            return False, []
+        else:
+            x = etree.fromstring(data)
 
-        action = wsd_common.get_action_id(x)
+            if not wsd_common.record_message_id(wsd_common.get_message_id(x)):
+                continue
 
-        if action not in ["http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches",
-                          "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches"]:
-            return None
+            action = wsd_common.get_action_id(x)
 
-        if wsd_globals.debug:
-            print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
-            wsd_common.log_xml(x)
-            print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+            if wsd_globals.debug:
+                print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))
+                wsd_common.log_xml(x)
+                print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
-        if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches":
-            tt = wsd_common.parse(x).get_target_services()
-            return len(tt) > 1, tt
-        if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches":
-            return False, wsd_common.parse(x).get_target_service()
+            if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ProbeMatches":
+                tt = wsd_common.parse(x).get_target_services()
+                return len(tt) > 1, tt
+            if action == "http://schemas.xmlsoap.org/ws/2005/04/discovery/ResolveMatches":
+                return False, wsd_common.parse(x).get_target_service()
 
 
 def open_multicast_udp_socket(addr: str, port: int) -> socket.socket:
@@ -158,6 +158,8 @@ def listen_multicast_announcements(sockets: typing.List[socket.socket]) \
         x = etree.fromstring(data)
         action = wsd_common.get_action_id(x)
         readable = []
+        if not wsd_common.record_message_id(wsd_common.get_message_id(x)):
+            continue
 
     if wsd_globals.debug:
         print('##\n## %s MATCH\n## %s\n##\n' % (action.split("/")[-1].upper(), server[0]))

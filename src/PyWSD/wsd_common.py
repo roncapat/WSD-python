@@ -100,7 +100,7 @@ def submit_request(addrs: typing.Set[str],
     """
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
     data = message_from_file(abs_path("templates/%s" % xml_template), **fields_map)
-    if debug:
+    if wsd_globals.debug:
         r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
         log_xml(r)
@@ -118,10 +118,10 @@ def submit_request(addrs: typing.Set[str],
             t = random.uniform(min_delay, max_delay)
             while repeat:
                 try:
-                    r = requests.post(addr, headers=headers, data=data, timeout=5)
+                    r = requests.post(addr, headers=headers, data=data, timeout=2)
                     break
                 except requests.Timeout:
-                    time.sleep(t)
+                    time.sleep(t / 1000.0)
                     t = t * 2 if t * 2 < upper_delay else upper_delay
                     repeat -= 1
         except requests.ConnectionError:
@@ -130,7 +130,7 @@ def submit_request(addrs: typing.Set[str],
             continue
 
         x = etree.fromstring(r.content)
-        if debug:
+        if wsd_globals.debug:
             print('##\n## %s RESPONSE\n##\n' % op_name)
             log_xml(x)
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
@@ -155,7 +155,7 @@ def check_fault(xml_soap_tree: etree.ElementTree) \
         subcode = xml_find(xml_soap_tree, ".//soap:Subcode/soap:Value").text
         reason = xml_find(xml_soap_tree, ".//soap:Reason/soap:Text").text
         detail = xml_find(xml_soap_tree, ".//soap:Detail").text
-        if debug:
+        if wsd_globals.debug:
             print('##\n## FAULT\n##\n')
             print("Code: %s\n" % code)
             print("Subcode: %s\n" % subcode)
@@ -214,6 +214,10 @@ def get_header_tree(xml_tree: etree.ElementTree) -> typing.Union[etree.ElementTr
     return xml_find(xml_tree, ".//soap:Header")
 
 
+def get_message_id(xml_tree: etree.ElementTree) -> str:
+    return xml_find(xml_tree, ".//wsa:MessageID").text
+
+
 def get_xml_str(xml_tree: etree.ElementTree, query: str) -> typing.Union[str, None]:
     q = xml_find(xml_tree, query)
     return q.text if q is not None else None
@@ -244,10 +248,11 @@ def parse(xml_tree: etree.ElementTree):
 
 
 def record_message_id(msg_id: str) -> bool:
-    if str in wsd_globals.last_msg_ids:
+    if msg_id in wsd_globals.last_msg_ids:
         return False
     wsd_globals.last_msg_ids[wsd_globals.last_msg_idx] = msg_id
     wsd_globals.last_msg_idx += 1
+    wsd_globals.last_msg_idx %= len(wsd_globals.last_msg_ids)
     return True
 
 
@@ -257,8 +262,7 @@ def log_xml(xml_tree: etree.ElementTree):
 
 
 def enable_debug(f: bool = True) -> None:
-    global debug
-    debug = f
+    wsd_globals.debug = f
 
 
 def init():
