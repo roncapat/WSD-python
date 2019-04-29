@@ -31,7 +31,8 @@ log_path = "../log"
 parser = etree.XMLParser(remove_blank_text=True)
 
 
-def gen_urn() -> str:
+def gen_urn() \
+        -> str:
     """
     Generate a URN. It can be used as device id and/or message id
 
@@ -63,7 +64,8 @@ def message_from_file(fname: str,
     return req
 
 
-def indent(text: str) -> str:
+def indent(text: str) \
+        -> str:
     """
     Indent (multiline) text with tabs
     :param text: the text to indent
@@ -77,8 +79,45 @@ def indent(text: str) -> str:
     return s
 
 
-def abs_path(relpath: str) -> str:
+def abs_path(relpath: str) \
+        -> str:
+    """
+    Obtain the absolute path of a file or folder, given its relative path from PyWSD directory.
+    :param relpath: the relative path
+    :return: the absolute path
+    """
     return os.path.abspath(os.path.join(os.path.dirname(__file__), relpath))
+
+
+def soap_post_unicast(addr: str,
+                      data: str) \
+        -> typing.Union[str, None]:
+    """
+    Send a SOAP message as an HTTP POST request.
+    Implements the retry mechanism specified in the SOAP-over-UDP specification.
+    :param addr: the address to send the message to
+    :type addr: str
+    :param data: the message content
+    :type data: str
+    :return: the reply message, if any
+    :rtype: str | None
+    """
+    min_delay = 50
+    max_delay = 250
+    upper_delay = 500
+    try:
+        repeat = 2
+        t = random.uniform(min_delay, max_delay)
+        while repeat:
+            try:
+                return requests.post(addr, headers=headers, data=data, timeout=2).content
+            except requests.Timeout:
+                time.sleep(t / 1000.0)
+                t = t * 2 if t * 2 < upper_delay else upper_delay
+                repeat -= 1
+        return None
+    except requests.ConnectionError:
+        return None
 
 
 def submit_request(addrs: typing.Set[str],
@@ -86,10 +125,12 @@ def submit_request(addrs: typing.Set[str],
                    fields_map: typing.Dict[str, str]) \
         -> etree.ElementTree:
     """
-    Send a wsd xml/soap request to the specified address, and wait for response.
+    Send a wsd xml/soap request to the specified device, and wait for response.
+    Multiple addresses could be provided: the message will be sent to each one until
+    the device replies.
 
-    :param addrs: the address of the wsd service
-    :type addrs: [str]
+    :param addrs: the addresses of the wsd service
+    :type addrs: {str}
     :param xml_template: the *name* of the template file to use as payload.\
     Should be of the form "prefix__some_words_for_description.xml"
     :type xml_template: str
@@ -100,6 +141,7 @@ def submit_request(addrs: typing.Set[str],
     """
     op_name = " ".join(xml_template.split("__")[1].split(".")[0].split("_")).upper()
     data = message_from_file(abs_path("templates/%s" % xml_template), **fields_map)
+
     if wsd_globals.debug:
         r = etree.fromstring(data.encode("ASCII"), parser=parser)
         print('##\n## %s REQUEST\n##\n' % op_name)
@@ -109,52 +151,37 @@ def submit_request(addrs: typing.Set[str],
     for addr in addrs:
         # TODO: handle ipv6 link-local addresses, remember to specify interface in URI
         # requests.post('http://[fe80::4aba:4eff:fec9:3d84%wlp3s0]:3911/', ...)
-        r = None
-        min_delay = 50
-        max_delay = 250
-        upper_delay = 500
-        try:
-            repeat = 2
-            t = random.uniform(min_delay, max_delay)
-            while repeat:
-                try:
-                    r = requests.post(addr, headers=headers, data=data, timeout=2)
-                    break
-                except requests.Timeout:
-                    time.sleep(t / 1000.0)
-                    t = t * 2 if t * 2 < upper_delay else upper_delay
-                    repeat -= 1
-        except requests.ConnectionError:
-            continue
+        r = soap_post_unicast(addr, data)
         if r is None:
             continue
 
-        x = etree.fromstring(r.content)
+        x = etree.fromstring(r)
+
         if wsd_globals.debug:
             print('##\n## %s RESPONSE\n##\n' % op_name)
             log_xml(x)
             print(etree.tostring(x, pretty_print=True, xml_declaration=True).decode("ASCII"))
+
         return x
 
     raise StopIteration
 
 
-def check_fault(xml_soap_tree: etree.ElementTree) \
+def check_fault(x: etree.ElementTree) \
         -> bool:
     """
     Check if this soap message represents a Fault or not
 
-    :param xml_soap_tree: an xml tree obtained by parsing a wsd service reply
-    :type xml_soap_tree: lxml.etree.ElementTree
+    :param x: an xml tree obtained by parsing a wsd service reply
+    :type x: lxml.etree.ElementTree
     :return: True if a fault message is detected, False otherwise
     :rtype: bool
     """
-    action = xml_find(xml_soap_tree, ".//wsa:Action").text
-    if action == 'http://schemas.xmlsoap.org/ws/2004/08/addressing/fault':
-        code = xml_find(xml_soap_tree, ".//soap:Code/soap:Value").text
-        subcode = xml_find(xml_soap_tree, ".//soap:Subcode/soap:Value").text
-        reason = xml_find(xml_soap_tree, ".//soap:Reason/soap:Text").text
-        detail = xml_find(xml_soap_tree, ".//soap:Detail").text
+    if get_action_id(x) == 'http://schemas.xmlsoap.org/ws/2004/08/addressing/fault':
+        code = get_xml_str(x, ".//soap:Code/soap:Value")
+        subcode = get_xml_str(x, ".//soap:Subcode/soap:Value")
+        reason = get_xml_str(x, ".//soap:Reason/soap:Text")
+        detail = get_xml_str(x, ".//soap:Detail")
         if wsd_globals.debug:
             print('##\n## FAULT\n##\n')
             print("Code: %s\n" % code)
@@ -180,7 +207,6 @@ def xml_find(xml_tree: etree.ElementTree,
     :return: the searched etree if found, or None otherwise
     :rtype: lxml.etree.ElementTree | None
     """
-
     return xml_tree.find(query, NSMAP)
 
 
@@ -198,56 +224,166 @@ def xml_findall(xml_tree: etree.ElementTree,
     :return: a list of searched etrees if found, or None otherwise
     :rtype: lxml.etree.ElementTree | None
     """
-
     return xml_tree.findall(query, NSMAP)
 
 
-def get_action_id(xml_tree: etree.ElementTree) -> str:
-    return xml_find(xml_tree, ".//wsa:Action").text
+def get_xml_str(xml_tree: etree.ElementTree,
+                query: str) \
+        -> typing.Union[str, None]:
+    """
+    Search for the specified node and extract the contained text.
 
-
-def get_body_tree(xml_tree: etree.ElementTree) -> typing.Union[etree.ElementTree, None]:
-    return xml_find(xml_tree, ".//soap:Body")
-
-
-def get_header_tree(xml_tree: etree.ElementTree) -> typing.Union[etree.ElementTree, None]:
-    return xml_find(xml_tree, ".//soap:Header")
-
-
-def get_message_id(xml_tree: etree.ElementTree) -> str:
-    return xml_find(xml_tree, ".//wsa:MessageID").text
-
-
-def get_xml_str(xml_tree: etree.ElementTree, query: str) -> typing.Union[str, None]:
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :param query: the XPath query
+    :type query: str
+    :return: the text contained in the node, if any
+    :rtype: str | None
+    """
     q = xml_find(xml_tree, query)
     return q.text if q is not None else None
 
 
-def get_xml_str_set(xml_tree: etree.ElementTree, query: str) -> typing.Union[typing.Set[str], None]:
+def get_xml_str_set(xml_tree: etree.ElementTree,
+                    query: str) \
+        -> typing.Union[typing.Set[str], None]:
+    """
+    Search for the specified node and extract the contained strings.
+    The text in the node is splitted considering standard separators.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :param query: the XPath query
+    :type query: str
+    :return: the strings contained in the node, if any
+    :rtype: {str} | None
+    """
     q = xml_find(xml_tree, query)
     return set(q.text.split()) if q is not None else None
 
 
-def get_xml_int(xml_tree: etree.ElementTree, query: str) -> typing.Union[int, None]:
+def get_xml_int(xml_tree: etree.ElementTree,
+                query: str) \
+        -> typing.Union[int, None]:
     q = xml_find(xml_tree, query)
+    """
+    Search for the specified node and extract the contained integer value.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :param query: the XPath query
+    :type query: str
+    :return: the integer number contained in the node, if any
+    :rtype: int | None
+    """
     return int(q.text) if q is not None else None
 
 
-def register_message_parser(action: str, msg_parser: typing.Callable) -> None:
+def get_header_tree(xml_tree: etree.ElementTree) \
+        -> typing.Union[etree.ElementTree, None]:
+    """
+    Extracts the xml node containing the SOAP header of the message, if any.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :return: the SOAP header node
+    :rtype: etree.ElementTree | None
+    """
+    return xml_find(xml_tree, ".//soap:Header")
+
+
+def get_body_tree(xml_tree: etree.ElementTree) \
+        -> typing.Union[etree.ElementTree, None]:
+    """
+    Extracts the xml node containing the SOAP body of the message, if any.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :return: the SOAP body node
+    :rtype: etree.ElementTree | None
+    """
+    return xml_find(xml_tree, ".//soap:Body")
+
+
+def get_action_id(xml_tree: etree.ElementTree) \
+        -> typing.Union[str, None]:
+    """
+    Extracts the action id from the WSA-compliant SOAP message.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :return: the WSA ation URI specified in the message, if any
+    :rtype: str | None
+    """
+    return get_xml_str(xml_tree, ".//wsa:Action")
+
+
+def get_message_id(xml_tree: etree.ElementTree) \
+        -> typing.Union[str, None]:
+    """
+    Extracts the message id from the WSA-compliant SOAP message.
+
+    :param xml_tree: the etree element to search in
+    :type xml_tree: lxml.etree.ElementTree
+    :return: the WSA unique message identifier specified in the message, if any
+    :rtype: str | None
+    """
+    return get_xml_str(xml_tree, ".//wsa:MessageID")
+
+
+def register_message_parser(action: str,
+                            msg_parser: typing.Callable) \
+        -> None:
+    """
+    Associates a parser to a specific type of WSA message, globally.
+    This will be the parser used by wsd_common.parse()
+
+    :param action: the WSA action URI that the parser can handle.
+    :type action: str
+    :param msg_parser: a message parser. It will be called by passing the message
+                       xml tree and is expected to return an object of the relevant
+                       class abstracting the message
+    :type msg_parser: callable
+    """
     wsd_globals.message_parsers[action] = msg_parser
 
 
-def unregister_message_parser(action: str) -> None:
+def unregister_message_parser(action: str) \
+        -> None:
+    """
+    Removes the parser for a specific type of WSA message.
+
+    :param action: the WSA action URI that the parser handle.
+    :type action: str
+    """
     del wsd_globals.message_parsers[action]
 
 
-def parse(xml_tree: etree.ElementTree):
-    a = get_action_id(xml_tree)
+def parse(ws_msg: etree.ElementTree):
+    """
+    Executes the parser associated with the WS message class/action.
+    Parsers can be registered with wsd_common.register_message_parser()
+
+    :param ws_msg: the etree element to search in
+    :type ws_msg: lxml.etree.ElementTree
+    :return: an object of the relevant class abstracting the message
+    """
+    a = get_action_id(ws_msg)
     if a in wsd_globals.message_parsers:
-        return wsd_globals.message_parsers[a](xml_tree)
+        return wsd_globals.message_parsers[a](ws_msg)
+    raise NotImplemented
 
 
-def record_message_id(msg_id: str) -> bool:
+def record_message_id(msg_id: str) \
+        -> bool:
+    """
+    Checks if the specified message is a duplicate, and records the id if not.
+
+    :param msg_id: the WSA message id to check
+    :type msg_id: str
+    :return: True if the message is not a duplicate, False otherwise.
+    :rtype: bool
+    """
     if msg_id in wsd_globals.last_msg_ids:
         return False
     wsd_globals.last_msg_ids[wsd_globals.last_msg_idx] = msg_id
@@ -256,21 +392,33 @@ def record_message_id(msg_id: str) -> bool:
     return True
 
 
-def log_xml(xml_tree: etree.ElementTree):
+def log_xml(xml_tree: etree.ElementTree) \
+        -> None:
+    """
+    Dumps the specified xml tree in a timestamped file in the log folder.
+
+    :param xml_tree: the node to dump
+    :type xml_tree: etree.ElementTree
+    """
     logfile = open(log_path + "/" + datetime.datetime.now().isoformat(), "w")
     logfile.write(etree.tostring(xml_tree, pretty_print=True, xml_declaration=True).decode("ASCII"))
 
 
-def enable_debug(f: bool = True) -> None:
-    wsd_globals.debug = f
+def enable_debug(status: bool = True) \
+        -> None:
+    """
+    Enables echoing of exchanged messages on standard output.
+    :param status: True to enable, False to disable
+    """
+    wsd_globals.debug = status
 
 
-def init():
-    wsd_globals.urn = gen_urn()
-    try:
-        os.mkdir(log_path)
-    except FileExistsError:
-        pass
+#######################
+# INITIALIZATION CODE #
+#######################
 
-
-init()
+wsd_globals.urn = gen_urn()
+try:
+    os.mkdir(log_path)
+except FileExistsError:
+    pass
