@@ -16,7 +16,7 @@ def wsd_subscribe(hosted_service: wsd_transfer__structures.HostedService,
                   event_uri: str,
                   notify_addr: str,
                   expiration: typing.Union[datetime, timedelta] = None) \
-        -> typing.Union(etree.ElementTree, False):
+        -> typing.Union[etree.ElementTree, bool]:
     """
     Subscribe to a certain type of events of a wsd service
 
@@ -117,7 +117,7 @@ def wsd_renew(hosted_service: wsd_transfer__structures.HostedService,
 
 def wsd_get_status(hosted_service: wsd_transfer__structures.HostedService,
                    subscription_id: str) \
-        -> typing.Union[None, False, datetime]:
+        -> typing.Union[None, bool, datetime]:
     """
     Get the status of an events subscription of a wsd service
 

@@ -14,6 +14,5 @@ query a WSD-enabled thermometer, for example.
 
 .. toctree::
    :maxdepth: 2
-         :caption: Reference:
 
    modules

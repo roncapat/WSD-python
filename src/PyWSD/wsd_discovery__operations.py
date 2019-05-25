@@ -18,16 +18,11 @@ from PyWSD import wsd_common, \
 
 discovery_verbosity = 0
 
-multicast_group = ('239.255.255.250', 3702)
-
 wsd_mcast_v4 = '239.255.255.250'
 wsd_mcast_v6 = 'FF02::C'
 wsd_udp_port = 3702
 
 db_path = os.environ.get("WSD_CACHE_PATH", "")
-if not db_path:
-    db_path = os.path.expanduser("~/.wsdcache.db")
-    os.environ["WSD_CACHE_PATH"] = db_path
 
 
 def send_multicast_soap_msg(xml_template: str,
@@ -324,20 +319,20 @@ def read_targets_from_db(db: sqlite3.Connection) -> typing.Set[wsd_discovery__st
 def add_target_to_db(db: sqlite3.Connection,
                      t: wsd_discovery__structures.TargetService) -> None:
     cursor = db.cursor()
-    cursor.execute("UPDATE WsdCache "
-                   "SET    EpRefAddr = :a, "
-                   "       MetadataVersion = :b, "
-                   "       SerializedTarget = :c "
-                   "WHERE  EpRefAddr = :a "
-                   "AND MetadataVersion > :b",
+    cursor.execute('UPDATE WsdCache '
+                   'SET    EpRefAddr = :a, '
+                   '       MetadataVersion = :b, '
+                   '       SerializedTarget = :c '
+                   'WHERE  EpRefAddr = :a '
+                   'AND MetadataVersion > :b',
                    {"a": t.ep_ref_addr,
                     "b": t.meta_ver,
                     "c": pickle.dumps(t, 0).decode()})
     if not cursor.rowcount:
-        cursor.execute("INSERT OR IGNORE "
-                       "INTO WsdCache "
-                       "(EpRefAddr, MetadataVersion, SerializedTarget) "
-                       "VALUES (:a,:b,:c)",
+        cursor.execute('INSERT OR IGNORE '
+                       'INTO WsdCache '
+                       '(EpRefAddr, MetadataVersion, SerializedTarget) '
+                       'VALUES (:a,:b,:c)',
                        {"a": t.ep_ref_addr,
                         "b": t.meta_ver,
                         "c": pickle.dumps(t, 0).decode()})
@@ -364,3 +359,11 @@ def discovery_log(text: str, lvl: int = 1):
 
 def open_db() -> sqlite3.Connection:
     return sqlite3.connect(db_path)
+
+
+#######################
+# INITIALIZATION CODE #
+#######################
+if not db_path:
+    db_path = os.path.expanduser("~/.wsdcache.db")
+    os.environ["WSD_CACHE_PATH"] = db_path
